@@ -95,6 +95,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
                     mPreview.stop();
                     startCameraSource();
+                    //Cambio
                 }
             }
         });
