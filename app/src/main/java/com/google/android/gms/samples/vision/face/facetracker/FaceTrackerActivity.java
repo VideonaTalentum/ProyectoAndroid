@@ -52,6 +52,9 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private static final String TAG = "FaceTracker";
 
     private CameraSource mCameraSourceBack = null;
+    private CameraSource mCameraSourceFront = null;
+
+    private Boolean usingCameraBack;
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
@@ -76,11 +79,23 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay) findViewById(R.id.faceOverlay);
         cameraFront = (Button) findViewById(R.id.cameraFront);
+        usingCameraBack = false;
 
         cameraFront.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(usingCameraBack){
+                    usingCameraBack=false;
 
+                    mPreview.stop();
+                    startCameraSource();
+
+                }else{
+                    usingCameraBack=true;
+
+                    mPreview.stop();
+                    startCameraSource();
+                }
             }
         });
 
@@ -159,6 +174,11 @@ public final class FaceTrackerActivity extends AppCompatActivity {
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setRequestedFps(30.0f)
                 .build();
+        mCameraSourceFront = new CameraSource.Builder(context, detector)
+                .setRequestedPreviewSize(640, 480)
+                .setFacing(CameraSource.CAMERA_FACING_FRONT)
+                .setRequestedFps(30.0f)
+                .build();
     }
 
 
@@ -191,6 +211,9 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         super.onDestroy();
         if (mCameraSourceBack != null) {
             mCameraSourceBack.release();
+        }
+        if (mCameraSourceFront != null) {
+            mCameraSourceFront.release();
         }
     }
 
@@ -261,13 +284,22 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             dlg.show();
         }
 
-        if (mCameraSourceBack != null) {
+        if (mCameraSourceBack != null && usingCameraBack == true) {
             try {
                 mPreview.start(mCameraSourceBack, mGraphicOverlay);
             } catch (IOException e) {
                 Log.e(TAG, "Unable to start camera source.", e);
                 mCameraSourceBack.release();
                 mCameraSourceBack = null;
+            }
+        }
+        if (mCameraSourceFront != null && usingCameraBack == false) {
+            try {
+                mPreview.start(mCameraSourceFront, mGraphicOverlay);
+            } catch (IOException e) {
+                Log.e(TAG, "Unable to start camera source.", e);
+                mCameraSourceFront.release();
+                mCameraSourceFront = null;
             }
         }
     }
