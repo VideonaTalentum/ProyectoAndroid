@@ -23,17 +23,19 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.Log;
 
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.Landmark;
 
 /**
  * Graphic instance for rendering face position, orientation, and landmarks within an associated
  * graphic overlay view.
  */
 class FaceGraphic extends GraphicOverlay.Graphic {
-    private static final float FACE_POSITION_RADIUS = 10.0f;
+    private static final float FACE_POSITION_RADIUS = 20.0f;
     private static final float ID_TEXT_SIZE = 40.0f;
     private static final float ID_Y_OFFSET = 50.0f;
     private static final float ID_X_OFFSET = -50.0f;
@@ -109,32 +111,38 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         if (face == null) {
             return;
         }
-
         // Draws a circle at the position of the detected face, with the face's track id below.
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
-
-        /*canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
-        canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
+        /*canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
         canvas.drawText("happiness: " + String.format("%.2f", face.getIsSmilingProbability()), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
         canvas.drawText("right eye: " + String.format("%.2f", face.getIsRightEyeOpenProbability()), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
         canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
 */
-
-
-
+        //Log.i("Angulo de rotacion: ",String.valueOf(face.getEulerZ()));
         // Draws a bounding box around the face.
         float xOffset = scaleX(face.getWidth() / 2.0f);
         float yOffset = scaleY(face.getHeight() / 2.0f);
         float left = x - xOffset;
-        float top = y - 1.5f*yOffset;
+        float top = y - yOffset;
         float right = x + xOffset;
-        float bottom = y - 0.5f*yOffset;
-        //canvas.drawBitmap(mBitmap,0,top,mDibujoPaint);
-        Rect rectangulo = new Rect((int) left,(int) top,(int) right,(int) bottom);
-        canvas.rotate(-(face.getEulerZ()));
-        canvas.drawBitmap(mBitmap,null,rectangulo,mDibujoPaint);
+        float bottom = y + yOffset;
+        RectF rectF1 = new RectF(left,top,right,bottom);
+        RectF rectF = new RectF(left,top-(bottom-top)/2,right,bottom-200);
 
-        //canvas.drawRect(left, top, right, bottom, mBoxPaint);
+
+        Log.i("",String.valueOf(bottom));
+
+        Matrix m = new Matrix();
+        m.setRotate(face.getEulerZ(), rectF.centerX(),rectF.centerY()+rectF.height());
+
+        canvas.setMatrix(m);
+
+        canvas.drawBitmap(mBitmap,null,rectF,mBoxPaint);
+        canvas.drawRect(rectF1,mBoxPaint);
+        canvas.drawRect(rectF,mBoxPaint);
+
+
+
     }
 }
