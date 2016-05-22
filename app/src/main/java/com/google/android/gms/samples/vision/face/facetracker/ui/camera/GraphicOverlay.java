@@ -18,6 +18,7 @@ package com.google.android.gms.samples.vision.face.facetracker.ui.camera;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
+import android.view.SurfaceView;
 import android.view.View;
 
 import com.google.android.gms.vision.CameraSource;
@@ -52,6 +53,7 @@ public class GraphicOverlay extends View {
     private int mFacing = CameraSource.CAMERA_FACING_BACK;
     private Set<Graphic> mGraphics = new HashSet<>();
 
+
     /**
      * Base class for a custom graphics object to be rendered within the graphic overlay.  Subclass
      * this and implement the {@link Graphic#draw(Canvas)} method to define the
@@ -59,6 +61,7 @@ public class GraphicOverlay extends View {
      */
     public static abstract class Graphic {
         private GraphicOverlay mOverlay;
+
 
         public Graphic(GraphicOverlay overlay) {
             mOverlay = overlay;
@@ -100,6 +103,7 @@ public class GraphicOverlay extends View {
         public float translateX(float x) {
             if (mOverlay.mFacing == CameraSource.CAMERA_FACING_FRONT) {
                 return mOverlay.getWidth() - scaleX(x);
+
             } else {
                 return scaleX(x);
             }

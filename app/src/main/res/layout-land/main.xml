@@ -7,13 +7,32 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:orientation="horizontal"
+        android:layout_height="wrap_content">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="we"
+            android:id="@+id/cameraFront"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="REC"
+            android:id="@+id/btnRec"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="STOP"
+            android:id="@+id/btnStop"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PLAY"
+            android:id="@+id/btnPlay"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="we"
-        android:id="@+id/cameraFront"/>
-
+    </LinearLayout>
   <com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview
       android:id="@+id/preview"
       android:layout_width="match_parent"

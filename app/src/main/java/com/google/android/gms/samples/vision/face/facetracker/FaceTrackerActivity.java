@@ -20,15 +20,21 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 
@@ -42,13 +48,16 @@ import com.google.android.gms.vision.face.FaceDetector;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
  * Activity for the face tracker app.  This app detects faces with the rear facing camera, and draws
  * overlay graphics to indicate the position, size, and ID of each face.
  */
-public final class FaceTrackerActivity extends AppCompatActivity {
+public final class FaceTrackerActivity extends AppCompatActivity implements SurfaceHolder.Callback {
     private static final String TAG = "FaceTracker";
 
     private CameraSource mCameraSourceBack = null;
@@ -59,6 +68,22 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
     private Button cameraFront;
+
+    private MediaRecorder mediaRecorder = null;
+    private MediaPlayer mediaPlayer = null;
+
+    private String fileName = null;
+
+    private boolean recording = false;
+    private boolean sombrero = false;
+    private boolean ojos = false;
+    private boolean boca = false;
+
+
+    Bitmap sombreroBitmap;
+    Bitmap ojoBitmap;
+    Bitmap ojoScaledBitmap;
+    Bitmap bocaBitmap;
 
     private static final int RC_HANDLE_GMS = 9001;
     // permission request codes need to be < 256
@@ -81,6 +106,21 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         cameraFront = (Button) findViewById(R.id.cameraFront);
         usingCameraBack = false;
 
+        sombreroBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                R.drawable.sombrero);
+        ojoBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                R.drawable.ojo);
+        ojoScaledBitmap = Bitmap.createScaledBitmap(ojoBitmap, 200, 200, true);
+        bocaBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+                R.drawable.boca);
+
+   
+
+        final Button btnRec = (Button)findViewById(R.id.btnRec);
+        final Button btnStop = (Button)findViewById(R.id.btnStop);
+        final Button btnPlay = (Button)findViewById(R.id.btnPlay);
+
+
         cameraFront.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -99,14 +139,85 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             }
         });
 
+
+        btnRec.setOnClickListener(new View.OnClickListener() {
+            @Override
+
+            public void onClick(View v) {
+
+                if(sombrero==false){
+                    sombrero=true;
+                }else{
+                    sombrero=false;
+                }
+
+            }
+        });
+
+        /**
+         * Bot—n para detener
+         */
+        btnStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if(ojos==false){
+                    ojos=true;
+                }else{
+                    ojos=false;
+                }
+
+
+            }
+        });
+
+        /**
+         * Bot—n para reproducir
+         */
+        btnPlay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(boca==false){
+                    boca=true;
+                }else{
+                    boca=false;
+                }
+
+
+            }
+        });
+
         // Check for the camera permission before accessing the camera.  If the
         // permission is not granted yet, request permission.
+
+        int rc1 = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
+        int rc2 = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAPTURE_VIDEO_OUTPUT);
         int rc = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
+        int rc3 = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
         if (rc == PackageManager.PERMISSION_GRANTED) {
             createCameraSource();
         } else {
             requestCameraPermission();
         }
+    }
+
+    private String guardarImagen (Context context, String nombre, Bitmap imagen){
+        ContextWrapper cw = new ContextWrapper(context);
+        File dirImages = cw.getDir("Videos", Context.MODE_PRIVATE);
+        File myPath = new File(dirImages, nombre + "/test.mp4");
+
+        FileOutputStream fos = null;
+        try{
+            fos = new FileOutputStream(myPath);
+            imagen.compress(Bitmap.CompressFormat.JPEG, 10, fos);
+            fos.flush();
+        }catch (FileNotFoundException ex){
+            ex.printStackTrace();
+        }catch (IOException ex){
+            ex.printStackTrace();
+        }
+        return myPath.getAbsolutePath();
     }
 
     /**
@@ -284,6 +395,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             dlg.show();
         }
 
+
         if (mCameraSourceBack != null && usingCameraBack == true) {
             try {
                 mPreview.start(mCameraSourceBack, mGraphicOverlay);
@@ -330,6 +442,10 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         GraphicFaceTracker(GraphicOverlay overlay) {
             mOverlay = overlay;
             mFaceGraphic = new FaceGraphic(overlay);
+            mFaceGraphic.setmBitmap(sombreroBitmap);
+            mFaceGraphic.setOjoBitmap(ojoScaledBitmap);
+            mFaceGraphic.setBocaBitmap(bocaBitmap);
+
         }
 
         /**
@@ -337,9 +453,8 @@ public final class FaceTrackerActivity extends AppCompatActivity {
          */
         @Override
         public void onNewItem(int faceId, Face item) {
-            Bitmap icon = BitmapFactory.decodeResource(getApplicationContext().getResources(),
-                    R.drawable.sombrero);
-            mFaceGraphic.setId(faceId,icon);
+            mFaceGraphic.setId(faceId);
+            mFaceGraphic.setCameraOrientation(usingCameraBack);
         }
 
         /**
@@ -348,8 +463,10 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         @Override
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
             mOverlay.add(mFaceGraphic);
-
             mFaceGraphic.updateFace(face);
+            mFaceGraphic.setSombrero(sombrero);
+            mFaceGraphic.setOjos(ojos);
+            mFaceGraphic.setBoca(boca);
         }
 
         /**
@@ -370,5 +487,36 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         public void onDone() {
             mOverlay.remove(mFaceGraphic);
         }
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+        if (mediaRecorder == null) {
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setPreviewDisplay(holder.getSurface());
+        }
+
+        if (mediaPlayer == null) {
+            mediaPlayer = new MediaPlayer();
+            mediaPlayer.setDisplay(holder);
+        }
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+    }
+
+    public void prepareRecorder(){
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
+        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
+    }
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        mediaRecorder.release();
+        mediaPlayer.release();
     }
 }

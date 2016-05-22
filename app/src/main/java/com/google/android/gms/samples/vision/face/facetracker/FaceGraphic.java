@@ -22,6 +22,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
@@ -29,6 +31,9 @@ import android.util.Log;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.Landmark;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Graphic instance for rendering face position, orientation, and landmarks within an associated
@@ -61,13 +66,24 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
     private volatile Face mFace;
 
-    private Bitmap mBitmap;
+    private Boolean sombrero = false;
+    private Boolean ojos = false;
+    private Boolean boca = false;
+
+    private Bitmap sombreroBitmap;
+    private Bitmap ojosBitmap;
+    private Bitmap bocaBitmap;
 
     private int mFaceId;
     private float mFaceHappiness;
 
+    private Boolean mCameraOrientation;
+
+    private  GraphicOverlay mOverlay;
+
     FaceGraphic(GraphicOverlay overlay) {
         super(overlay);
+        mOverlay = overlay;
 
         mCurrentColorIndex = (mCurrentColorIndex + 1) % COLOR_CHOICES.length;
         final int selectedColor = COLOR_CHOICES[mCurrentColorIndex];
@@ -87,9 +103,36 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mDibujoPaint = new Paint();
     }
 
-    void setId(int id,Bitmap bitmap2) {
+    void setId(int id) {
         mFaceId = id;
-        mBitmap = bitmap2;
+    }
+
+    void setmBitmap(Bitmap bitmap){
+        sombreroBitmap = bitmap;
+    }
+
+    void setOjoBitmap(Bitmap bitmap){
+        ojosBitmap = bitmap;
+    }
+
+    void setBocaBitmap(Bitmap bitmap){
+        bocaBitmap = bitmap;
+    }
+
+    void setSombrero(Boolean sombrero){
+        this.sombrero=sombrero;
+    }
+
+    void setOjos(Boolean ojos){
+        this.ojos=ojos;
+    }
+
+    void setBoca(Boolean boca){
+        this.boca=boca;
+    }
+
+    void setCameraOrientation(Boolean cameraOrientation){
+        mCameraOrientation = cameraOrientation;
     }
 
 
@@ -114,35 +157,81 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         // Draws a circle at the position of the detected face, with the face's track id below.
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
-        /*canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
-        canvas.drawText("happiness: " + String.format("%.2f", face.getIsSmilingProbability()), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
-        canvas.drawText("right eye: " + String.format("%.2f", face.getIsRightEyeOpenProbability()), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
-        canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
-*/
-        //Log.i("Angulo de rotacion: ",String.valueOf(face.getEulerZ()));
-        // Draws a bounding box around the face.
+
         float xOffset = scaleX(face.getWidth() / 2.0f);
         float yOffset = scaleY(face.getHeight() / 2.0f);
         float left = x - xOffset;
         float top = y - yOffset;
         float right = x + xOffset;
         float bottom = y + yOffset;
-        RectF rectF1 = new RectF(left,top,right,bottom);
-        RectF rectF = new RectF(left,top-(bottom-top)/2,right,bottom-200);
+        RectF rectF = new RectF(left,top-2*(bottom-top)/3,right,bottom-2*(bottom-top)/3);
 
 
-        Log.i("",String.valueOf(bottom));
-
+        canvas.save(Canvas.MATRIX_SAVE_FLAG);
         Matrix m = new Matrix();
-        m.setRotate(face.getEulerZ(), rectF.centerX(),rectF.centerY()+rectF.height());
 
-        canvas.setMatrix(m);
+        if(mCameraOrientation){
+            m.setRotate(-face.getEulerZ(), rectF.centerX(), rectF.centerY() + rectF.height());
+        }else{
+            m.setRotate(face.getEulerZ(), rectF.centerX(), rectF.centerY() + rectF.height());
+        }
 
-        canvas.drawBitmap(mBitmap,null,rectF,mBoxPaint);
-        canvas.drawRect(rectF1,mBoxPaint);
-        canvas.drawRect(rectF,mBoxPaint);
+        canvas.concat(m);
+        if(sombrero) {
+            canvas.drawBitmap(sombreroBitmap, null, rectF, mBoxPaint);
+        }
 
+        canvas.restore();
+
+        Paint paint = new Paint();
+        paint.setColor(Color.GREEN);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(5);
+
+
+        int i=0;
+        List<PointF> lista = new ArrayList<>();
+        for (Landmark landmark : mFace.getLandmarks()) {
+                float cx = translateX(landmark.getPosition().x);
+                float cy = translateY(landmark.getPosition().y);
+            if (i<2 && ojos) {
+                float xOffset1 = (scaleX(face.getWidth() / 2.0f)/3);
+                float yOffset1 = (scaleY(face.getHeight() / 2.0f)/3);
+                float left1 = cx - xOffset1;
+                float top1 = cy - yOffset1;
+                float right1 = cx + xOffset1;
+                float bottom1 = cy + yOffset1;
+                RectF rectF1 = new RectF(left1,top1,right1,bottom1);
+
+                canvas.drawBitmap(ojosBitmap, null,rectF1, mBoxPaint);
+
+            }
+
+            if(i>4 && boca){
+
+                PointF punto = new PointF(cx,cy);
+
+                lista.add(punto);
+                if(lista.size()==3) {
+                    float xOffset1 = (scaleX(face.getWidth() / 2.0f)/4);
+                    float yOffset1 = (scaleY(face.getHeight() / 2.0f)/4);
+                    float left1 = cx - xOffset1;
+                    float top1 = cy - yOffset1;
+                    float right1 = cx + xOffset1;
+                    float bottom1 = cy + yOffset1;
+                    RectF rectF1 = new RectF(left1,top1,right1,bottom1);
+                    canvas.drawBitmap(bocaBitmap,null,rectF1,mBoxPaint);
+
+                }
+            }
+            i++;
+        }
 
 
     }
+
+
+
+
+
 }
