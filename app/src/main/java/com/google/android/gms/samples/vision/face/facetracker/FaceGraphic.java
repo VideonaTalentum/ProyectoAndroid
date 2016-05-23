@@ -183,52 +183,61 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
         canvas.restore();
 
-        Paint paint = new Paint();
-        paint.setColor(Color.GREEN);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(5);
 
 
         int i=0;
         List<PointF> lista = new ArrayList<>();
+        List<PointF> lista2 = new ArrayList<>();
         for (Landmark landmark : mFace.getLandmarks()) {
-                float cx = translateX(landmark.getPosition().x);
-                float cy = translateY(landmark.getPosition().y);
-            if (i<2 && ojos) {
-                float xOffset1 = (scaleX(face.getWidth() / 2.0f)/3);
-                float yOffset1 = (scaleY(face.getHeight() / 2.0f)/3);
-                float left1 = cx - xOffset1;
-                float top1 = cy - yOffset1;
-                float right1 = cx + xOffset1;
-                float bottom1 = cy + yOffset1;
-                RectF rectF1 = new RectF(left1,top1,right1,bottom1);
+            float cx = translateX(landmark.getPosition().x);
+            float cy = translateY(landmark.getPosition().y);
 
-                canvas.drawBitmap(ojosBitmap, null,rectF1, mBoxPaint);
+            lista2.add(new PointF(cx, cy));
 
+            if(lista2.size()==8){
+                lista=lista2;
             }
 
-            if(i>4 && boca){
+            if (lista.size() == 8) {
 
-                PointF punto = new PointF(cx,cy);
+                for (int j = 0; j < lista.size(); j++) {
+                    if (j < 2 && ojos) {
+                        float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 3);
+                        float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
+                        float left1 = lista.get(j).x - xOffset1;
+                        float top1 = lista.get(j).y - yOffset1;
+                        float right1 = lista.get(j).x + xOffset1;
+                        float bottom1 = lista.get(j).y + yOffset1;
+                        RectF rectF1 = new RectF(left1, top1, right1, bottom1);
 
-                lista.add(punto);
-                if(lista.size()==3) {
-                    float xOffset1 = (scaleX(face.getWidth() / 2.0f)/4);
-                    float yOffset1 = (scaleY(face.getHeight() / 2.0f)/4);
-                    float left1 = cx - xOffset1;
-                    float top1 = cy - yOffset1;
-                    float right1 = cx + xOffset1;
-                    float bottom1 = cy + yOffset1;
-                    RectF rectF1 = new RectF(left1,top1,right1,bottom1);
-                    canvas.drawBitmap(bocaBitmap,null,rectF1,mBoxPaint);
+                        canvas.drawBitmap(ojosBitmap, null, rectF1, mBoxPaint);
+
+                    }
+
+                    if (j ==7 && boca) {
+
+                            float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 4);
+                            float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 4);
+                            float left1 = lista.get(j).x - xOffset1;
+                            float top1 = lista.get(j).y - yOffset1;
+                            float right1 = lista.get(j).x + xOffset1;
+                            float bottom1 = lista.get(j).y + yOffset1;
+                            RectF rectF1 = new RectF(left1, top1, right1, bottom1);
+                            canvas.drawBitmap(bocaBitmap, null, rectF1, mBoxPaint);
+                    }
 
                 }
+
+
+                i++;
+
             }
-            i++;
         }
-
-
     }
+
+
+
+
 
 
 
