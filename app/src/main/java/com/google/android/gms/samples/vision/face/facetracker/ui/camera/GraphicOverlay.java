@@ -20,6 +20,7 @@ import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.VideoView;
 
 import com.google.android.gms.vision.CameraSource;
 

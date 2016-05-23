@@ -22,13 +22,17 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -37,7 +41,10 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
 
+import com.github.fafaldo.fabtoolbar.widget.FABToolbarLayout;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.vision.CameraSource;
@@ -57,7 +64,7 @@ import java.io.IOException;
  * Activity for the face tracker app.  This app detects faces with the rear facing camera, and draws
  * overlay graphics to indicate the position, size, and ID of each face.
  */
-public final class FaceTrackerActivity extends AppCompatActivity implements SurfaceHolder.Callback {
+public final class FaceTrackerActivity extends AppCompatActivity implements View.OnClickListener {
     private static final String TAG = "FaceTracker";
 
     private CameraSource mCameraSourceBack = null;
@@ -67,27 +74,20 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
-    private Button cameraFront;
 
-    private MediaRecorder mediaRecorder = null;
-    private MediaPlayer mediaPlayer = null;
+    private boolean hat = false;
+    private boolean eyes = false;
+    private boolean mouth = false;
 
-    private String fileName = null;
-
-    private boolean recording = false;
-    private boolean sombrero = false;
-    private boolean ojos = false;
-    private boolean boca = false;
-
-
-    Bitmap sombreroBitmap;
-    Bitmap ojoBitmap;
-    Bitmap ojoScaledBitmap;
-    Bitmap bocaBitmap;
+    Bitmap hatBitmap;
+    Bitmap eyeBitmap;
+    Bitmap eyeScaledBitmap;
+    Bitmap mouthBitmap;
 
     private static final int RC_HANDLE_GMS = 9001;
-    // permission request codes need to be < 256
     private static final int RC_HANDLE_CAMERA_PERM = 2;
+
+    private FABToolbarLayout morph;
 
     //==============================================================================================
     // Activity Methods
@@ -103,122 +103,50 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay) findViewById(R.id.faceOverlay);
-        cameraFront = (Button) findViewById(R.id.cameraFront);
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        morph = (FABToolbarLayout) findViewById(R.id.fabtoolbar);
+
+        ImageView uno, dos, tres, cuatro;
+
+        uno = (ImageView) findViewById(R.id.uno);
+        dos = (ImageView) findViewById(R.id.dos);
+        cuatro = (ImageView) findViewById(R.id.cuatro);
+        tres = (ImageView) findViewById(R.id.tres);
+
+        fab.setOnClickListener(this);
+        uno.setOnClickListener(this);
+        dos.setOnClickListener(this);
+        tres.setOnClickListener(this);
+        cuatro.setOnClickListener(this);
+
         usingCameraBack = false;
 
-        sombreroBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+        hatBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
                 R.drawable.sombrero);
-        ojoBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+        eyeBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
                 R.drawable.ojo);
-        ojoScaledBitmap = Bitmap.createScaledBitmap(ojoBitmap, 200, 200, true);
-        bocaBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
+        eyeScaledBitmap = Bitmap.createScaledBitmap(eyeBitmap, 200, 200, true);
+        mouthBitmap = BitmapFactory.decodeResource(getApplicationContext().getResources(),
                 R.drawable.boca);
 
-   
-
-        final Button btnRec = (Button)findViewById(R.id.btnRec);
-        final Button btnStop = (Button)findViewById(R.id.btnStop);
-        final Button btnPlay = (Button)findViewById(R.id.btnPlay);
 
 
-        cameraFront.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(usingCameraBack){
-                    usingCameraBack=false;
 
-                    mPreview.stop();
-                    startCameraSource();
-
-                }else{
-                    usingCameraBack=true;
-
-                    mPreview.stop();
-                    startCameraSource();
-                }
-            }
-        });
-
-
-        btnRec.setOnClickListener(new View.OnClickListener() {
-            @Override
-
-            public void onClick(View v) {
-
-                if(sombrero==false){
-                    sombrero=true;
-                }else{
-                    sombrero=false;
-                }
-
-            }
-        });
-
-        /**
-         * Bot—n para detener
-         */
-        btnStop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                if(ojos==false){
-                    ojos=true;
-                }else{
-                    ojos=false;
-                }
-
-
-            }
-        });
-
-        /**
-         * Bot—n para reproducir
-         */
-        btnPlay.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(boca==false){
-                    boca=true;
-                }else{
-                    boca=false;
-                }
-
-
-            }
-        });
-
-        // Check for the camera permission before accessing the camera.  If the
-        // permission is not granted yet, request permission.
-
-        int rc1 = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
-        int rc2 = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAPTURE_VIDEO_OUTPUT);
         int rc = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-        int rc3 = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
         if (rc == PackageManager.PERMISSION_GRANTED) {
             createCameraSource();
         } else {
             requestCameraPermission();
         }
+
+
     }
 
-    private String guardarImagen (Context context, String nombre, Bitmap imagen){
-        ContextWrapper cw = new ContextWrapper(context);
-        File dirImages = cw.getDir("Videos", Context.MODE_PRIVATE);
-        File myPath = new File(dirImages, nombre + "/test.mp4");
 
-        FileOutputStream fos = null;
-        try{
-            fos = new FileOutputStream(myPath);
-            imagen.compress(Bitmap.CompressFormat.JPEG, 10, fos);
-            fos.flush();
-        }catch (FileNotFoundException ex){
-            ex.printStackTrace();
-        }catch (IOException ex){
-            ex.printStackTrace();
-        }
-        return myPath.getAbsolutePath();
-    }
+
+
 
     /**
      * Handles the requesting of the camera permission.  This includes
@@ -258,7 +186,6 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
      * at long distances.
      */
     private void createCameraSource() {
-
         Context context = getApplicationContext();
         FaceDetector detector = new FaceDetector.Builder(context)
                 .setClassificationType(FaceDetector.ALL_CLASSIFICATIONS)
@@ -281,12 +208,12 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
         }
 
         mCameraSourceBack = new CameraSource.Builder(context, detector)
-                .setRequestedPreviewSize(640, 480)
+                .setRequestedPreviewSize(1980, 1080)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setRequestedFps(30.0f)
                 .build();
         mCameraSourceFront = new CameraSource.Builder(context, detector)
-                .setRequestedPreviewSize(640, 480)
+                .setRequestedPreviewSize(1980, 1080)
                 .setFacing(CameraSource.CAMERA_FACING_FRONT)
                 .setRequestedFps(30.0f)
                 .build();
@@ -300,7 +227,6 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
     @Override
     protected void onResume() {
         super.onResume();
-
         startCameraSource();
     }
 
@@ -416,6 +342,86 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
         }
     }
 
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.fab) {
+            morph.show();
+        }
+
+
+        switch (v.getId()){
+            case R.id.uno:
+                if(usingCameraBack){
+                    usingCameraBack=false;
+                    mPreview.stop();
+                    startCameraSource();
+                }else{
+                    usingCameraBack=true;
+                    mPreview.stop();
+                    startCameraSource();
+                }
+                break;
+            case R.id.dos:
+                if(mouth==false){
+                    mouth=true;
+                }else{
+                    mouth=false;
+                }
+                break;
+            case R.id.tres:
+                if(eyes==false){
+                    eyes=true;
+                }else{
+                    eyes=false;
+                }
+                break;
+            case R.id.cuatro:
+
+
+                mCameraSourceFront.takePicture(new CameraSource.ShutterCallback() {
+                    @Override
+                    public void onShutter() {
+                        Log.i("we1","we");
+                    }
+                }, new CameraSource.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] bytes) {
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes , 0, bytes.length);
+
+                        String ruta = guardarImagen(getApplicationContext(), "imagen1", bitmap);
+
+                        Toast.makeText(getApplicationContext(), ruta, Toast.LENGTH_LONG).show();
+                    }
+                });
+
+                break;
+
+
+
+
+        }
+        morph.hide();
+
+    }
+
+    private String guardarImagen (Context context, String nombre, Bitmap imagen){
+        ContextWrapper cw = new ContextWrapper(context);
+        File dirImages = getFilesDir();
+        File myPath = new File(dirImages, nombre + ".png");
+
+        FileOutputStream fos = null;
+        try{
+            fos = new FileOutputStream(myPath);
+            imagen.compress(Bitmap.CompressFormat.JPEG, 10, fos);
+            fos.flush();
+        }catch (FileNotFoundException ex){
+            ex.printStackTrace();
+        }catch (IOException ex){
+            ex.printStackTrace();
+        }
+        return myPath.getAbsolutePath();
+    }
+
     //==============================================================================================
     // Graphic Face Tracker
     //==============================================================================================
@@ -442,9 +448,9 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
         GraphicFaceTracker(GraphicOverlay overlay) {
             mOverlay = overlay;
             mFaceGraphic = new FaceGraphic(overlay);
-            mFaceGraphic.setmBitmap(sombreroBitmap);
-            mFaceGraphic.setOjoBitmap(ojoScaledBitmap);
-            mFaceGraphic.setBocaBitmap(bocaBitmap);
+            mFaceGraphic.setmBitmap(hatBitmap);
+            mFaceGraphic.setOjoBitmap(eyeScaledBitmap);
+            mFaceGraphic.setBocaBitmap(mouthBitmap);
 
         }
 
@@ -464,9 +470,9 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
-            mFaceGraphic.setSombrero(sombrero);
-            mFaceGraphic.setOjos(ojos);
-            mFaceGraphic.setBoca(boca);
+            mFaceGraphic.setSombrero(hat);
+            mFaceGraphic.setOjos(eyes);
+            mFaceGraphic.setBoca(mouth);
         }
 
         /**
@@ -489,34 +495,5 @@ public final class FaceTrackerActivity extends AppCompatActivity implements Surf
         }
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        if (mediaRecorder == null) {
-            mediaRecorder = new MediaRecorder();
-            mediaRecorder.setPreviewDisplay(holder.getSurface());
-        }
 
-        if (mediaPlayer == null) {
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDisplay(holder);
-        }
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-    }
-
-    public void prepareRecorder(){
-        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
-        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
-    }
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        mediaRecorder.release();
-        mediaPlayer.release();
-    }
 }
