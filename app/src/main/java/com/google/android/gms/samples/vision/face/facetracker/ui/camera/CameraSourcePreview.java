@@ -87,9 +87,7 @@ public class CameraSourcePreview extends ViewGroup {
             if (mOverlay != null) {
                 Size size = mCameraSource.getPreviewSize();
                 int min = Math.min(size.getWidth(), size.getHeight());
-                Log.i("we",String.valueOf(min));
                 int max = Math.max(size.getWidth(), size.getHeight());
-                Log.i("we",String.valueOf(max));
                 if (isPortraitMode()) {
                     // Swap width and height sizes when in portrait, since it will be rotated by
                     // 90 degrees
