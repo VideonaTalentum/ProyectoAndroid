@@ -75,44 +75,14 @@ public class View extends Activity implements android.view.View.OnClickListener 
 
         presenter.checkCameraPermissions(mGraphicOverlay);
 
-
     }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-
         if(presenter.onRequestPermissionsResultPresenter(requestCode,permissions,grantResults)) {
-
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
-//
-//        if (requestCode != RC_HANDLE_CAMERA_PERM) {
-//            Log.d(TAG, "Got unexpected permission result: " + requestCode);
-//            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//            return;
-//        }
-//
-//        if (grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//            Log.d(TAG, "Camera permission granted - initialize the camera source");
-//            // we have permission, so create the camerasource
-//            presenter.createCameraSource(mGraphicOverlay);
-//            return;
-//        }
-//
-//        Log.e(TAG, "Permission not granted: results len = " + grantResults.length +
-//                " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
-//
-//        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-//            public void onClick(DialogInterface dialog, int id) {
-//                finish();
-//            }
-//        };
-//
-//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//        builder.setTitle("Face Tracker sample")
-//                .setMessage(R.string.no_camera_permission)
-//                .setPositiveButton(R.string.ok, listener)
-//                .show();
     }
 
     /**
@@ -143,9 +113,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
         if (mPreview != null) {
             mPreview.release();
         }
-
     }
-
 
     @Override
     public void onClick(android.view.View v) {
@@ -166,8 +134,10 @@ public class View extends Activity implements android.view.View.OnClickListener 
             case R.id.buttonFour:
                 presenter.takePicture();
                 break;
+            case R.id.faceOverlay:
+                fabToolbarLayout.hide();
+                break;
         }
-        fabToolbarLayout.hide();
     }
 
 

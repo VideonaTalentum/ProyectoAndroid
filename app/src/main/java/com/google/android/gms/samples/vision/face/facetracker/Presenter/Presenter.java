@@ -4,12 +4,15 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -112,6 +115,10 @@ public class Presenter {
 
                 String ruta = guardarImagen(context, "imagen1", bitmap);
 
+                //addImageToGallery(ruta,context);
+
+                MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "COSA" , "cosa");
+
                 Toast.makeText(context, ruta, Toast.LENGTH_LONG).show();
             }
         });
@@ -119,7 +126,16 @@ public class Presenter {
 
     private String guardarImagen(Context context, String nombre, Bitmap imagen) {
         ContextWrapper cw = new ContextWrapper(context);
-        //String myPath = MediaStore.Images.Media.DATA+"/"+nombre+".png";
+
+        File file = new File (
+                Environment.getExternalStoragePublicDirectory (
+                        String.valueOf(Environment.getDataDirectory())), "CameraAppDemo");
+        if (!file.exists ())
+        {
+            file.mkdirs();
+            Log.i("weee","weeeee");
+        }
+
         File myPath = cw.getDatabasePath("data");
         if (!myPath.exists()) {
         }
@@ -128,13 +144,23 @@ public class Presenter {
             fos = new FileOutputStream(myPath);
             imagen.compress(Bitmap.CompressFormat.JPEG, 10, fos);
             fos.flush();
-            Log.i("we", String.valueOf(imagen.getHeight()));
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
         return myPath.getAbsolutePath();
+    }
+
+    public static void addImageToGallery(final String filePath, final Context context) {
+
+        ContentValues values = new ContentValues();
+
+        values.put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis());
+        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.MediaColumns.DATA, filePath);
+
+        context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
     }
 
     public void createCameraSource(GraphicOverlay overlay) {
