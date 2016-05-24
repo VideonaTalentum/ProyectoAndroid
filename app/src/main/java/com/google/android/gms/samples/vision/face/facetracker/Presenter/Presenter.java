@@ -11,11 +11,13 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -34,6 +36,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.security.Permission;
 
 /**
  * Created by Arranque 1 on 24/05/2016.
@@ -61,6 +65,7 @@ public class Presenter {
 
     private static final int RC_HANDLE_GMS = 9001;
     private static final int RC_HANDLE_CAMERA_PERM = 2;
+    private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
 
 
     public Presenter(Context context, GraphicOverlay overlay, CameraSourcePreview preview, Model model, android.app.Activity view) {
@@ -101,6 +106,14 @@ public class Presenter {
         }
     }
 
+    public void changeHat() {
+        if (hat == false) {
+            hat = true;
+        } else {
+            hat = false;
+        }
+    }
+
 
     public void takePicture() {
         mCameraSourceFront.takePicture(new CameraSource.ShutterCallback() {
@@ -111,57 +124,64 @@ public class Presenter {
         }, new CameraSource.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 
-                String ruta = guardarImagen(context, "imagen1", bitmap);
+                mGraphicOverlay.setDrawingCacheEnabled(true);
 
-                //addImageToGallery(ruta,context);
 
-                MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "COSA" , "cosa");
+                mGraphicOverlay.buildDrawingCache();
 
-                Toast.makeText(context, ruta, Toast.LENGTH_LONG).show();
+                Bitmap bm1 = mGraphicOverlay.getDrawingCache();
+
+                Bitmap bm2 = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+
+                Bitmap cs = null;
+
+                int width, height = 0;
+
+                if(bm1.getWidth() > bm2.getWidth()) {
+                    width = bm1.getWidth() + bm2.getWidth();
+                    height = bm1.getHeight();
+                } else {
+                    width = bm2.getWidth() + bm2.getWidth();
+                    height = bm1.getHeight();
+                }
+
+                cs = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+
+                Canvas comboImage = new Canvas(cs);
+
+                comboImage.drawBitmap(bm2, 0f, 0f, null);
+                comboImage.drawBitmap(bm1, bm2.getWidth(), 0f, null);
+
+                String path = null;
+                try {
+                    path = saveImage(context, "imagen1", cs);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                Toast.makeText(context, path, Toast.LENGTH_LONG).show();
             }
         });
     }
 
-    private String guardarImagen(Context context, String nombre, Bitmap imagen) {
-        ContextWrapper cw = new ContextWrapper(context);
+    private String saveImage(Context context, String name, Bitmap bitmapImage) throws IOException {
 
-        File file = new File (
-                Environment.getExternalStoragePublicDirectory (
-                        String.valueOf(Environment.getDataDirectory())), "CameraAppDemo");
-        if (!file.exists ())
-        {
-            file.mkdirs();
-            Log.i("weee","weeeee");
-        }
+        String path = Environment.getExternalStorageDirectory().toString();
+        OutputStream fOut = null;
+        File file = new File(path, name+".jpg");
+        fOut = new FileOutputStream(file);
 
-        File myPath = cw.getDatabasePath("data");
-        if (!myPath.exists()) {
-        }
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(myPath);
-            imagen.compress(Bitmap.CompressFormat.JPEG, 10, fos);
-            fos.flush();
-        } catch (FileNotFoundException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return myPath.getAbsolutePath();
+        bitmapImage.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
+        fOut.flush();
+        fOut.close();
+
+        MediaStore.Images.Media.insertImage(context.getContentResolver(), file.getAbsolutePath(), file.getName(), file.getName());
+
+
+        return file.getAbsolutePath();
     }
 
-    public static void addImageToGallery(final String filePath, final Context context) {
-
-        ContentValues values = new ContentValues();
-
-        values.put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis());
-        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
-        values.put(MediaStore.MediaColumns.DATA, filePath);
-
-        context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-    }
 
     public void createCameraSource(GraphicOverlay overlay) {
 
@@ -198,6 +218,8 @@ public class Presenter {
                 .build();
     }
 
+
+
     public boolean checkCameraPermissions(GraphicOverlay overlay){
         mGraphicOverlay = overlay;
         int rc = ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA);
@@ -208,18 +230,39 @@ public class Presenter {
             return requestCameraPermission();
         }
 
-        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);
-        if (code != ConnectionResult.SUCCESS) {
-            Dialog dlg =
-                    GoogleApiAvailability.getInstance().getErrorDialog(view, code, RC_HANDLE_GMS);
-            dlg.show();
+
+//        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);
+//        if (code != ConnectionResult.SUCCESS) {
+//            Dialog dlg =
+//                    GoogleApiAvailability.getInstance().getErrorDialog(view, code, RC_HANDLE_GMS);
+//            dlg.show();
+//        }
+        return true;
+    }
+
+    public boolean checkWriteExternalStoragePermissions(){
+
+        int rc1 = ActivityCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if(rc1 == PackageManager.PERMISSION_DENIED){
+            requestExternalStoragePermission();
         }
-
-
         return true;
     }
 
 
+
+    public void requestExternalStoragePermission(){
+
+        final String[] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(view,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_WRITE_EXTERNAL_STORAGE);
+        }
+
+
+    }
 
 
     private boolean requestCameraPermission() {
@@ -232,52 +275,47 @@ public class Presenter {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_CAMERA_PERM);
         }
 
-        final Activity thisActivity = view;
-
-        android.view.View.OnClickListener listener = new android.view.View.OnClickListener() {
-            @Override
-            public void onClick(android.view.View view) {
-                ActivityCompat.requestPermissions(thisActivity, permissions,
-                        RC_HANDLE_CAMERA_PERM);
-            }
-        };
-
-        Snackbar.make(mGraphicOverlay, R.string.permission_camera_rationale,
-                Snackbar.LENGTH_INDEFINITE)
-                .setAction(R.string.ok, listener)
-                .show();
         return false;
     }
 
 
 
     public boolean onRequestPermissionsResultPresenter(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode != RC_HANDLE_CAMERA_PERM) {
+        if (requestCode != RC_HANDLE_CAMERA_PERM && requestCode != RC_HANDLE_WRITE_EXTERNAL_STORAGE) {
             Log.d(TAG, "Got unexpected permission result: " + requestCode);
             return true;
         }
 
-        if (grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+
+        if (requestCode == RC_HANDLE_WRITE_EXTERNAL_STORAGE && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Write External Storage permission granted");
+            checkCameraPermissions(mGraphicOverlay);
+            return false;
+        }
+
+
+        if (requestCode == RC_HANDLE_CAMERA_PERM && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Camera permission granted - initialize the camera source");
-            // we have permission, so create the camerasource
             createCameraSource(mGraphicOverlay);
             return false;
         }
 
-        Log.e(TAG, "Permission not granted: results len = " + grantResults.length +
-                " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
 
-        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                view.finish();
-            }
-        };
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(view);
-        builder.setTitle("Face Tracker sample")
-                .setMessage(R.string.no_camera_permission)
-                .setPositiveButton(R.string.ok, listener)
-                .show();
+//        Log.e(TAG, "Permission not granted: results len = " + grantResults.length +
+//                " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
+//
+//        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+//            public void onClick(DialogInterface dialog, int id) {
+//                view.finish();
+//            }
+//        };
+//
+//        AlertDialog.Builder builder = new AlertDialog.Builder(view);
+//        builder.setTitle("Face Tracker sample")
+//                .setMessage(R.string.no_camera_permission)
+//                .setPositiveButton(R.string.ok, listener)
+//                .show();
         return false;
     }
 
@@ -287,14 +325,6 @@ public class Presenter {
 
 
     public CameraSourcePreview startCameraSource() {
-
-        // check that the device has play services available.
-//        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);
-//        if (code != ConnectionResult.SUCCESS) {
-//            /*Dialog dlg =
-//                    GoogleApiAvailability.getInstance().getErrorDialog(this, code, RC_HANDLE_GMS);
-//            dlg.show();*/
-//        }
 
 
         if (mCameraSourceBack != null && usingCameraBack == true) {

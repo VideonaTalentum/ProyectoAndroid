@@ -180,6 +180,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
 
 
+
         int i=0;
         List<PointF> lista = new ArrayList<>();
         List<PointF> lista2 = new ArrayList<>();
@@ -205,20 +206,48 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         float bottom1 = lista.get(j).y + yOffset1;
                         RectF rectF1 = new RectF(left1, top1, right1, bottom1);
 
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        Matrix m1 = new Matrix();
+
+                        if(mCameraOrientation){
+                            m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }else{
+                            m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }
+
+                        canvas.concat(m1);
+
                         canvas.drawBitmap(ojosBitmap, null, rectF1, mBoxPaint);
+
+                        canvas.restore();
 
                     }
 
                     if (j ==7 && boca) {
 
-                            float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 4);
-                            float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 4);
-                            float left1 = lista.get(j).x - xOffset1;
-                            float top1 = lista.get(j).y - yOffset1;
-                            float right1 = lista.get(j).x + xOffset1;
-                            float bottom1 = lista.get(j).y + yOffset1;
-                            RectF rectF1 = new RectF(left1, top1, right1, bottom1);
-                            canvas.drawBitmap(bocaBitmap, null, rectF1, mBoxPaint);
+                        float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 4);
+                        float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 4);
+                        float left1 = lista.get(j).x - xOffset1;
+                        float top1 = lista.get(j).y - yOffset1;
+                        float right1 = lista.get(j).x + xOffset1;
+                        float bottom1 = lista.get(j).y + yOffset1;
+                        RectF rectF1 = new RectF(left1, top1, right1, bottom1);
+
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        Matrix m2 = new Matrix();
+
+                        if(mCameraOrientation){
+                            m2.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }else{
+                            m2.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }
+
+                        canvas.concat(m2);
+
+                        canvas.drawBitmap(bocaBitmap, null, rectF1, mBoxPaint);
+
+                        canvas.restore();
+
                     }
 
                 }
@@ -227,7 +256,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                 i++;
 
             }
-        }
+       }
     }
 
 

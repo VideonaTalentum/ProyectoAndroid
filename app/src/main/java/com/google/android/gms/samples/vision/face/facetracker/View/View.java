@@ -40,7 +40,6 @@ public class View extends Activity implements android.view.View.OnClickListener 
     private FABToolbarLayout fabToolbarLayout;
     private FloatingActionButton fab;
 
-    private static final int RC_HANDLE_CAMERA_PERM = 2;
 
 
 
@@ -73,7 +72,10 @@ public class View extends Activity implements android.view.View.OnClickListener 
         buttonFour.setOnClickListener(this);
         mGraphicOverlay.setOnClickListener(this);
 
+
+        presenter.checkWriteExternalStoragePermissions();
         presenter.checkCameraPermissions(mGraphicOverlay);
+
 
     }
 
@@ -126,7 +128,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
                 presenter.changeCamera();
                 break;
             case R.id.buttonTwo:
-                presenter.changeMouth();
+                presenter.changeHat();
                 break;
             case R.id.buttonThree:
                 presenter.changeEyes();
