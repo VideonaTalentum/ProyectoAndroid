@@ -17,11 +17,10 @@ public class Model {
     public Bitmap hatBitmap;
     public Bitmap eyeBitmap;
     public Bitmap eyeScaledBitmap;
+    public Bitmap moustacheBitmap;
     public Bitmap mouthBitmap;
 
 
-    private Presenter presenter;
-    private View view;
 
     private Context context;
 
@@ -33,6 +32,7 @@ public class Model {
         eyeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ojo);
         eyeScaledBitmap = Bitmap.createScaledBitmap(eyeBitmap, 200, 200, true);
         mouthBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.boca);
+        moustacheBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.bigotes);
 
     }
 

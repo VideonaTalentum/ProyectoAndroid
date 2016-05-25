@@ -30,18 +30,9 @@ import com.google.android.gms.vision.face.Landmark;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Graphic instance for rendering face position, orientation, and landmarks within an associated
- * graphic overlay view.
- */
 class FaceGraphic extends GraphicOverlay.Graphic {
-    private static final float FACE_POSITION_RADIUS = 20.0f;
     private static final float ID_TEXT_SIZE = 40.0f;
-    private static final float ID_Y_OFFSET = 50.0f;
-    private static final float ID_X_OFFSET = -50.0f;
     private static final float BOX_STROKE_WIDTH = 5.0f;
-
-
 
     private static final int COLOR_CHOICES[] = {
         Color.BLUE,
@@ -57,17 +48,19 @@ class FaceGraphic extends GraphicOverlay.Graphic {
     private Paint mFacePositionPaint;
     private Paint mIdPaint;
     private Paint mBoxPaint;
-    private Paint mDibujoPaint;
 
     private volatile Face mFace;
 
     private Boolean sombrero = false;
     private Boolean ojos = false;
     private Boolean boca = false;
+    private Boolean moustache = false;
 
     private Bitmap sombreroBitmap;
     private Bitmap ojosBitmap;
     private Bitmap bocaBitmap;
+    private Bitmap moustacheBitmap;
+    List<PointF> lista = new ArrayList<>();
 
     private int mFaceId;
     private float mFaceHappiness;
@@ -94,8 +87,6 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mBoxPaint.setColor(selectedColor);
         mBoxPaint.setStyle(Paint.Style.STROKE);
         mBoxPaint.setStrokeWidth(BOX_STROKE_WIDTH);
-
-        mDibujoPaint = new Paint();
     }
 
     void setId(int id) {
@@ -114,8 +105,17 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         bocaBitmap = bitmap;
     }
 
+
+    void setMoustacheBitmap(Bitmap bitmap){
+        moustacheBitmap = bitmap;
+    }
+
     void setSombrero(Boolean sombrero){
         this.sombrero=sombrero;
+    }
+
+    void setMoustache(Boolean moustache){
+        this.moustache=moustache;
     }
 
     void setOjos(Boolean ojos){
@@ -182,7 +182,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
 
         int i=0;
-        List<PointF> lista = new ArrayList<>();
+
         List<PointF> lista2 = new ArrayList<>();
         for (Landmark landmark : mFace.getLandmarks()) {
             float cx = translateX(landmark.getPosition().x);
@@ -220,6 +220,35 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.drawBitmap(ojosBitmap, null, rectF1, mBoxPaint);
 
                         canvas.restore();
+
+                    }
+
+                    if(j==2 && moustache){
+
+                        float xOffset1 = (scaleX(face.getWidth() / 2.0f));
+                        float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
+                        float left1 = lista.get(j).x - xOffset1;
+                        float top1 = lista.get(j).y - yOffset1;
+                        float right1 = lista.get(j).x + xOffset1;
+                        float bottom1 = lista.get(j).y + 2*yOffset1;
+                        RectF rectF1 = new RectF(left1, top1, right1, bottom1);
+
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        Matrix m1 = new Matrix();
+
+
+                        if(mCameraOrientation){
+                            m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }else{
+                            m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }
+
+                        canvas.concat(m1);
+
+                        canvas.drawBitmap(moustacheBitmap, null, rectF1, mBoxPaint);
+
+                        canvas.restore();
+
 
                     }
 

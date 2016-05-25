@@ -62,8 +62,8 @@ public class Presenter {
     private boolean hat = false;
     private boolean eyes = false;
     private boolean mouth = false;
+    private boolean moustache = false;
 
-    private static final int RC_HANDLE_GMS = 9001;
     private static final int RC_HANDLE_CAMERA_PERM = 2;
     private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
 
@@ -114,6 +114,15 @@ public class Presenter {
         }
     }
 
+    public void changeMoustache() {
+        if (moustache == false) {
+            moustache = true;
+        } else {
+            moustache = false;
+        }
+    }
+
+
 
     public void takePicture() {
         mCameraSourceFront.takePicture(new CameraSource.ShutterCallback() {
@@ -125,19 +134,23 @@ public class Presenter {
             @Override
             public void onPictureTaken(byte[] bytes) {
 
+                mPreview.setDrawingCacheEnabled(true);
                 mGraphicOverlay.setDrawingCacheEnabled(true);
 
 
+                mPreview.buildDrawingCache();
                 mGraphicOverlay.buildDrawingCache();
 
+                Bitmap bm = mPreview.getDrawingCache();
                 Bitmap bm1 = mGraphicOverlay.getDrawingCache();
 
                 Bitmap bm2 = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 
                 Bitmap cs = null;
 
-                int width, height = 0;
-
+                int height = 1920;
+                int width = 1080;
+/*
                 if(bm1.getWidth() > bm2.getWidth()) {
                     width = bm1.getWidth() + bm2.getWidth();
                     height = bm1.getHeight();
@@ -145,6 +158,9 @@ public class Presenter {
                     width = bm2.getWidth() + bm2.getWidth();
                     height = bm1.getHeight();
                 }
+*/
+                Log.i("height: ",String.valueOf(height));
+                Log.i("width: ",String.valueOf(width));
 
                 cs = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
@@ -377,6 +393,7 @@ public class Presenter {
             mFaceGraphic.setmBitmap(model.hatBitmap);
             mFaceGraphic.setOjoBitmap(model.eyeScaledBitmap);
             mFaceGraphic.setBocaBitmap(model.mouthBitmap);
+            mFaceGraphic.setMoustacheBitmap(model.moustacheBitmap);
 
         }
 
@@ -399,6 +416,7 @@ public class Presenter {
             mFaceGraphic.setSombrero(hat);
             mFaceGraphic.setOjos(eyes);
             mFaceGraphic.setBoca(mouth);
+            mFaceGraphic.setMoustache(moustache);
         }
 
         /**
