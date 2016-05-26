@@ -22,7 +22,7 @@
     <application
         android:allowBackup="true"
         android:hardwareAccelerated="true"
-        android:icon="@drawable/icon"
+        android:icon="@drawable/icon23"
         android:label="FaceTracker"
         android:theme="@style/Theme.AppCompat"
         tools:node="replace">
@@ -35,7 +35,7 @@
 
         <activity
             android:name=".View.View"
-            android:icon="@drawable/icon"
+            android:icon="@drawable/icon23"
             android:label="Face Tracker"
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.AppCompat.NoActionBar">
