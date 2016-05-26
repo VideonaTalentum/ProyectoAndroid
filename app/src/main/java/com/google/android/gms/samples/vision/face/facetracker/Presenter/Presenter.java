@@ -11,12 +11,18 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Camera;
 import android.graphics.Canvas;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -46,6 +52,8 @@ public class Presenter {
 
     private Context context;
 
+    private android.hardware.Camera camera;
+
     private static final String TAG = "FaceTracker";
 
     private CameraSourcePreview mPreview;
@@ -67,6 +75,11 @@ public class Presenter {
     private static final int RC_HANDLE_CAMERA_PERM = 2;
     private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
 
+    public MediaRecorder recorder;
+    SurfaceHolder holder;
+    public boolean recording = false;
+    SurfaceView cameraView;
+
 
     public Presenter(Context context, GraphicOverlay overlay, CameraSourcePreview preview, Model model, android.app.Activity view) {
         this.model = model;
@@ -74,7 +87,118 @@ public class Presenter {
         this.mGraphicOverlay = overlay;
         this.context = context;
         this.view = view;
+        //camera = android.hardware.Camera.open();
+
     }
+
+    public void prepareRecorder() {
+        recorder.setPreviewDisplay(holder.getSurface());
+
+        try {
+            recorder.prepare();
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+            view.finish();
+        } catch (IOException e) {
+            e.printStackTrace();
+            view.finish();
+        }
+    }
+
+
+    public void setRecorderSettings(){
+
+        recorder = new MediaRecorder();
+        initRecorder();
+
+        cameraView = (SurfaceView) mPreview.getChildAt(0);
+        holder = cameraView.getHolder();
+        holder.addCallback((SurfaceHolder.Callback) view);
+        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+
+        cameraView.setClickable(true);
+        cameraView.setOnClickListener((View.OnClickListener) view);
+
+    }
+
+    public void initRecorder() {
+        recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        recorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+
+        CamcorderProfile cpHigh = CamcorderProfile
+                .get(CamcorderProfile.QUALITY_HIGH);
+        recorder.setProfile(cpHigh);
+        recorder.setOutputFile("/sdcard/videocapture_example.mp4");
+        recorder.setMaxDuration(50000); // 50 seconds
+        recorder.setMaxFileSize(5000000); // Approximately 5 megabytes
+    }
+
+    public boolean startRecording() {
+        try {
+            camera.unlock();
+            recorder = new MediaRecorder();
+            recorder.setOnErrorListener(new MediaRecorder.OnErrorListener() {
+
+                @Override
+                public void onError(MediaRecorder mr, int what, int extra) {
+                    Log.i(TAG, "Error");
+                }
+            });
+
+            recorder.setCamera(camera);
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            recorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+            Log.i(TAG, "a");
+
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
+            recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H263);
+            Log.i(TAG, "b");
+
+            recorder.setMaxDuration(200); // set to 20000
+
+            String path = Environment.getExternalStorageDirectory().toString();
+            String uniqueOutFile = path+ System.currentTimeMillis() + ".mp4";
+            File outFile = new File(uniqueOutFile);
+            java.io.File inFile = new java.io.File(view.getApplicationContext().getFileStreamPath("FileName.mp4").getPath());
+            if (inFile.exists()) {
+                inFile.delete();
+            }
+            recorder.setOutputFile(inFile.getPath());
+            recorder.setVideoFrameRate(20); // set to 20
+            //recorder.setVideoSize(cameraView.getWidth(), cameraView.getHeight());
+            Log.i(TAG, "c");
+
+            recorder.setPreviewDisplay(holder.getSurface());
+            recorder.setMaxFileSize(5000); // set to 50000
+            recorder.prepare();
+            Log.i(TAG, "d");
+
+            recorder.start();
+            Log.i(TAG, "e");
+
+            return true;
+        } catch (IllegalStateException e) {
+            Log.i(TAG, "f");
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            camera.lock();
+            return false;
+        } catch (IOException e) {
+            Log.i(TAG, "g");
+            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+            camera.lock();
+            return false;
+        } catch (RuntimeException e) {
+            Log.i(TAG, "h");
+            e.printStackTrace();
+            Log.e(TAG, e.getMessage());
+            camera.lock();
+            return false;
+        }
+    }
+
 
 
     public void changeCamera() {
@@ -121,6 +245,8 @@ public class Presenter {
             moustache = false;
         }
     }
+
+
 
 
 

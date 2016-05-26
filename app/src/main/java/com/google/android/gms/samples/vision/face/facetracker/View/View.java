@@ -1,7 +1,13 @@
 package com.google.android.gms.samples.vision.face.facetracker.View;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.graphics.Camera;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.view.SurfaceHolder;
+import android.view.Window;
 import android.widget.ImageView;
 
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
@@ -10,7 +16,7 @@ import com.google.android.gms.samples.vision.face.facetracker.R;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 
-public class View extends Activity implements android.view.View.OnClickListener {
+public class View extends Activity implements android.view.View.OnClickListener, SurfaceHolder.Callback {
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
@@ -24,6 +30,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
     private com.getbase.floatingactionbutton.FloatingActionButton moustacheIcon;
     private com.getbase.floatingactionbutton.FloatingActionButton recordIcon;
     private com.getbase.floatingactionbutton.FloatingActionButton changeCameraIcon;
+
 
 
     @Override
@@ -56,6 +63,26 @@ public class View extends Activity implements android.view.View.OnClickListener 
         presenter.checkWriteExternalStoragePermissions();
         presenter.checkCameraPermissions(mGraphicOverlay);
 
+
+
+        int RC_HANDLE_AUDIO_PERM = 5;
+
+        int rc = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+
+        if (rc == PackageManager.PERMISSION_GRANTED) {
+
+        } else {
+            final String[] permissions = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE};
+
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                ActivityCompat.requestPermissions(this, permissions, RC_HANDLE_AUDIO_PERM);
+            }
+
+        }
+
+
+        presenter.setRecorderSettings();
 
     }
 
@@ -113,14 +140,48 @@ public class View extends Activity implements android.view.View.OnClickListener 
                 presenter.changeMoustache();
                 break;
             case R.id.recordIcon:
-                presenter.takePicture();
+                if (presenter.recording) {
+                    presenter.recorder.stop();
+                    presenter.recording = false;
+
+                    // Let's initRecorder so we can record again
+                    presenter.initRecorder();
+                    presenter.prepareRecorder();
+                } else {
+                    presenter.recording = true;
+                    presenter.startRecording();
+                }
                 break;
             case R.id.changeCameraIcon:
                 presenter.changeCamera();
                 break;
+
         }
     }
 
 
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
 
+        presenter.prepareRecorder();
+
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+
+        if(presenter.recording){
+
+            presenter.recorder.stop();
+            presenter.recording = false;
+        }
+
+        presenter.recorder.release();
+        finish();
+    }
 }
