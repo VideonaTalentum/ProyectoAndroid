@@ -19,6 +19,8 @@ public class Model {
     public Bitmap eyeScaledBitmap;
     public Bitmap moustacheBitmap;
     public Bitmap mouthBitmap;
+    public Bitmap hatBitmap1;
+    public Bitmap hatBitmap2;
 
 
 
@@ -28,11 +30,13 @@ public class Model {
 
         this.context = context;
         hatBitmap = BitmapFactory.decodeResource(context.getResources(),
-        R.drawable.sombrero);
+        R.drawable.mascaras_17);
         eyeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ojo);
         eyeScaledBitmap = Bitmap.createScaledBitmap(eyeBitmap, 200, 200, true);
         mouthBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.boca);
-        moustacheBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.bigotes);
+        moustacheBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.moustage_garfio);
+
+
 
     }
 

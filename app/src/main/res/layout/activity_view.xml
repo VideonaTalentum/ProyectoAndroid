@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:fab="http://schemas.android.com/apk/res-auto"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
@@ -39,13 +38,16 @@
             android:layout_alignParentRight="true"
             >
 
-            <com.getbase.floatingactionbutton.FloatingActionButton
+
+
+        <com.getbase.floatingactionbutton.FloatingActionButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#00052345"
                 app:fabSize="mini"
                 android:src="@drawable/hat_icon"
-                android:id="@+id/hatIcon"/>
+                android:id="@+id/hatIcon"
+                />
 
 
             <com.getbase.floatingactionbutton.FloatingActionButton
@@ -60,7 +62,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#00052345"
-                app:fabSize="normal"
+                app:fabSize="mini"
                 android:src="@drawable/mouth_icon"
                 android:id="@+id/mouthIcon"
                 />
@@ -99,6 +101,8 @@
         android:src="@drawable/turn_camera_icon"
         android:id="@+id/changeCameraIcon"
         />
+
+
 
 </RelativeLayout>
 

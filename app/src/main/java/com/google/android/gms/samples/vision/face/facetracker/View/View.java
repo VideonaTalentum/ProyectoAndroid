@@ -2,8 +2,6 @@ package com.google.android.gms.samples.vision.face.facetracker.View;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.ImageView;
-
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
 import com.google.android.gms.samples.vision.face.facetracker.Presenter.Presenter;
 import com.google.android.gms.samples.vision.face.facetracker.R;
@@ -26,6 +24,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
     private com.getbase.floatingactionbutton.FloatingActionButton changeCameraIcon;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,6 +35,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
 
         model = new Model(getApplicationContext());
         presenter = new Presenter(getApplicationContext(),mGraphicOverlay,mPreview,model,this);
+
 
         hatIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.hatIcon);
         eyesIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.eyesIcon);
@@ -55,7 +55,6 @@ public class View extends Activity implements android.view.View.OnClickListener 
 
         presenter.checkWriteExternalStoragePermissions();
         presenter.checkCameraPermissions(mGraphicOverlay);
-
 
     }
 
@@ -83,6 +82,8 @@ public class View extends Activity implements android.view.View.OnClickListener 
     protected void onPause() {
         super.onPause();
         mPreview.stop();
+        presenter.releaseMediaRecorder();
+        presenter.releaseCamera();
     }
 
     /**
@@ -113,7 +114,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
                 presenter.changeMoustache();
                 break;
             case R.id.recordIcon:
-                presenter.takePicture();
+                presenter.onCaptureClick();
                 break;
             case R.id.changeCameraIcon:
                 presenter.changeCamera();

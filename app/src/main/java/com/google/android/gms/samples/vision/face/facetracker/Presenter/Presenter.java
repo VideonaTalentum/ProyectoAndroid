@@ -1,6 +1,7 @@
 package com.google.android.gms.samples.vision.face.facetracker.Presenter;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -12,11 +13,20 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.hardware.Camera;
+import android.hardware.camera2.CameraManager;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+import android.view.TextureView;
+import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -24,6 +34,7 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
 import com.google.android.gms.samples.vision.face.facetracker.R;
+import com.google.android.gms.samples.vision.face.facetracker.media.CameraHelper;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.CameraSource;
@@ -38,6 +49,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Permission;
+import java.util.List;
 
 /**
  * Created by Arranque 1 on 24/05/2016.
@@ -46,7 +58,16 @@ public class Presenter {
 
     private Context context;
 
-    private static final String TAG = "FaceTracker";
+
+
+    private Camera mCamera;
+    private MediaRecorder mMediaRecorder;
+    private File mOutputFile;
+
+    private boolean isRecording = false;
+    private static final String TAG = "Recorder";
+
+
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
@@ -66,6 +87,9 @@ public class Presenter {
 
     private static final int RC_HANDLE_CAMERA_PERM = 2;
     private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
+
+    private GraphicOverlay mOverlay;
+    private FaceGraphic mFaceGraphic;
 
 
     public Presenter(Context context, GraphicOverlay overlay, CameraSourcePreview preview, Model model, android.app.Activity view) {
@@ -245,14 +269,6 @@ public class Presenter {
         } else {
             return requestCameraPermission();
         }
-
-
-//        int code = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);
-//        if (code != ConnectionResult.SUCCESS) {
-//            Dialog dlg =
-//                    GoogleApiAvailability.getInstance().getErrorDialog(view, code, RC_HANDLE_GMS);
-//            dlg.show();
-//        }
         return true;
     }
 
@@ -276,8 +292,6 @@ public class Presenter {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_WRITE_EXTERNAL_STORAGE);
         }
-
-
     }
 
 
@@ -290,11 +304,8 @@ public class Presenter {
                 Manifest.permission.CAMERA)) {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_CAMERA_PERM);
         }
-
         return false;
     }
-
-
 
     public boolean onRequestPermissionsResultPresenter(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode != RC_HANDLE_CAMERA_PERM && requestCode != RC_HANDLE_WRITE_EXTERNAL_STORAGE) {
@@ -302,14 +313,11 @@ public class Presenter {
             return true;
         }
 
-
-
         if (requestCode == RC_HANDLE_WRITE_EXTERNAL_STORAGE && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Write External Storage permission granted");
             checkCameraPermissions(mGraphicOverlay);
             return false;
         }
-
 
         if (requestCode == RC_HANDLE_CAMERA_PERM && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Camera permission granted - initialize the camera source");
@@ -317,21 +325,6 @@ public class Presenter {
             return false;
         }
 
-
-//        Log.e(TAG, "Permission not granted: results len = " + grantResults.length +
-//                " Result code = " + (grantResults.length > 0 ? grantResults[0] : "(empty)"));
-//
-//        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-//            public void onClick(DialogInterface dialog, int id) {
-//                view.finish();
-//            }
-//        };
-//
-//        AlertDialog.Builder builder = new AlertDialog.Builder(view);
-//        builder.setTitle("Face Tracker sample")
-//                .setMessage(R.string.no_camera_permission)
-//                .setPositiveButton(R.string.ok, listener)
-//                .show();
         return false;
     }
 
@@ -384,8 +377,7 @@ public class Presenter {
      * associated face overlay.
      */
     private class GraphicFaceTracker extends Tracker<Face> {
-        private GraphicOverlay mOverlay;
-        private FaceGraphic mFaceGraphic;
+
 
         GraphicFaceTracker(GraphicOverlay overlay) {
             mOverlay = overlay;
@@ -438,6 +430,182 @@ public class Presenter {
             mOverlay.remove(mFaceGraphic);
         }
     }
+
+    public void onCaptureClick() {
+        if (isRecording) {
+            // BEGIN_INCLUDE(stop_release_media_recorder)
+
+            // stop recording and release camera
+            try {
+                mMediaRecorder.stop();  // stop the recording
+            } catch (RuntimeException e) {
+                // RuntimeException is thrown when stop() is called immediately after start().
+                // In this case the output file is not properly constructed ans should be deleted.
+                Log.d(TAG, "RuntimeException: stop() is called immediately after start()");
+                //noinspection ResultOfMethodCallIgnored
+                mOutputFile.delete();
+            }
+            releaseMediaRecorder(); // release the MediaRecorder object
+            mCamera.lock();         // take camera access back from MediaRecorder
+
+            // inform the user that recording has stopped
+            //setCaptureButtonText("Capture");
+            isRecording = false;
+            releaseCamera();
+            // END_INCLUDE(stop_release_media_recorder)
+
+        } else {
+
+            // BEGIN_INCLUDE(prepare_start_media_recorder)
+
+            new MediaPrepareTask().execute(null, null, null);
+
+            // END_INCLUDE(prepare_start_media_recorder)
+
+        }
+    }
+
+   /* private void setCaptureButtonText(String title) {
+        captureButton.setText(title);
+    }*/
+
+
+
+    public void releaseMediaRecorder(){
+        if (mMediaRecorder != null) {
+            // clear recorder configuration
+            mMediaRecorder.reset();
+            // release the recorder object
+            mMediaRecorder.release();
+            mMediaRecorder = null;
+            // Lock camera for later use i.e taking it back from MediaRecorder.
+            // MediaRecorder doesn't need it anymore and we will release it if the activity pauses.
+            mCamera.lock();
+        }
+    }
+
+    public void releaseCamera(){
+        if (mCamera != null){
+            // release the camera for other applications
+            mCamera.release();
+            mCamera = null;
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    private boolean prepareVideoRecorder(){
+
+        // BEGIN_INCLUDE (configure_preview)
+        if(usingCameraBack){
+            mCamera = Camera.open(CameraSource.CAMERA_FACING_BACK);
+        }
+        else{
+            mCamera = Camera.open(CameraSource.CAMERA_FACING_FRONT);
+        }
+
+
+
+        // We need to make sure that our preview and recording video size are supported by the
+        // camera. Query camera to find all the sizes and choose the optimal size given the
+        // dimensions of our preview surface.
+        Camera.Parameters parameters = mCamera.getParameters();
+        List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
+        List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
+        Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
+                mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
+
+        // Use the same size for recording profile.
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
+        profile.videoFrameWidth = optimalSize.width;
+        profile.videoFrameHeight = optimalSize.height;
+
+        // likewise for the camera object itself.
+        parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
+        mCamera.setParameters(parameters);
+        try {
+            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
+            // with {@link SurfaceView}
+
+            mCamera.setPreviewDisplay(mPreview.mSurfaceView.getHolder());
+        } catch (IOException e) {
+            Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
+            return false;
+        }
+        // END_INCLUDE (configure_preview)
+
+
+        // BEGIN_INCLUDE (configure_media_recorder)
+        mMediaRecorder = new MediaRecorder();
+
+        // Step 1: Unlock and set camera to MediaRecorder
+        mCamera.unlock();
+        mMediaRecorder.setCamera(mCamera);
+
+        // Step 2: Set sources
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT );
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+
+
+        // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
+        mMediaRecorder.setProfile(profile);
+
+        // Step 4: Set output file
+        mOutputFile = CameraHelper.getOutputMediaFile(CameraHelper.MEDIA_TYPE_VIDEO);
+        if (mOutputFile == null) {
+            return false;
+        }
+        mMediaRecorder.setOutputFile(mOutputFile.getPath());
+        // END_INCLUDE (configure_media_recorder)
+
+        // Step 5: Prepare configured MediaRecorder
+        try {
+            mMediaRecorder.prepare();
+        } catch (IllegalStateException e) {
+            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            releaseMediaRecorder();
+            return false;
+        } catch (IOException e) {
+            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+            releaseMediaRecorder();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Asynchronous task for preparing the {@link android.media.MediaRecorder} since it's a long blocking
+     * operation.
+     */
+    class MediaPrepareTask extends AsyncTask<Void, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            // initialize video camera
+            if (prepareVideoRecorder()) {
+                // Camera is available and unlocked, MediaRecorder is prepared,
+                // now you can start recording
+                mMediaRecorder.start();
+
+                isRecording = true;
+            } else {
+                // prepare didn't work, release the camera
+                releaseMediaRecorder();
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            if (!result) {
+                view.finish();
+            }
+            // inform the user that recording has started
+            //setCaptureButtonText("Stop");
+
+        }
+    }
+
 
 
 }
