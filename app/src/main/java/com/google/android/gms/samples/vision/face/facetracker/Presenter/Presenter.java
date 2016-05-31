@@ -2,45 +2,24 @@ package com.google.android.gms.samples.vision.face.facetracker.Presenter;
 
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.ContentValues;
 import android.content.Context;
-import android.content.ContextWrapper;
-import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Camera;
-import android.graphics.Canvas;
-import android.graphics.drawable.GradientDrawable;
-import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
-import android.hardware.camera2.CameraManager;
-import android.media.CamcorderProfile;
-import android.media.MediaRecorder;
-import android.os.AsyncTask;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.view.View;
-import android.view.TextureView;
-import android.view.View;
-import android.widget.Button;
-import android.widget.FrameLayout;
+import android.util.SparseIntArray;
+import android.view.Surface;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
-import com.google.android.gms.samples.vision.face.facetracker.R;
-import com.google.android.gms.samples.vision.face.facetracker.media.CameraHelper;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
 import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.CameraSource;
@@ -48,14 +27,7 @@ import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.security.Permission;
-import java.util.List;
 
 /**
  * Created by Arranque 1 on 24/05/2016.
@@ -65,12 +37,29 @@ public class Presenter {
     private Context context;
 
 
+    private static final int REQUEST_CODE = 1000;
+    private int mScreenDensity;
+    private MediaProjectionManager mProjectionManager;
+    private static final int DISPLAY_WIDTH = 720;
+    private static final int DISPLAY_HEIGHT = 1280;
+    private MediaProjection mMediaProjection;
+    private VirtualDisplay mVirtualDisplay;
+    private MediaProjectionCallback mMediaProjectionCallback;
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
-    private android.hardware.Camera mCamera;
+
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        ORIENTATIONS.append(Surface.ROTATION_270, 180);
+    }
+
+
+
     private MediaRecorder mMediaRecorder;
-    private File mOutputFile;
 
-    private boolean isRecording = false;
+    public boolean isRecording = false;
     private static final String TAG = "Recorder";
 
 
@@ -85,18 +74,13 @@ public class Presenter {
 
     private Boolean usingCameraBack = false;
 
-    private boolean hat = false;
-    private boolean eyes = false;
-    private boolean mouth = false;
-    private boolean moustache = false;
+    private boolean hatBoolean = false;
+    private boolean eyesBoolean = false;
+    private boolean moustacheBoolean = false;
 
     private static final int RC_HANDLE_CAMERA_PERM = 2;
     private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
-
-    public MediaRecorder recorder;
-    SurfaceHolder holder;
-    public boolean recording = false;
-    SurfaceView cameraView;
+    private static final int RC_HANDLE_RECORD_AUDIO = 4;
 
     private GraphicOverlay mOverlay;
     private FaceGraphic mFaceGraphic;
@@ -109,11 +93,121 @@ public class Presenter {
         this.context = context;
         this.view = view;
 
+        DisplayMetrics metrics = new DisplayMetrics();
+        view.getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mScreenDensity = metrics.densityDpi;
+
+        mMediaRecorder = new MediaRecorder();
+
+        mProjectionManager = (MediaProjectionManager) view.getSystemService
+                (Context.MEDIA_PROJECTION_SERVICE);
+
     }
 
 
+    public void onToggleScreenShare() {
+        if (!isRecording) {
+            initRecorder();
+            shareScreen();
+            isRecording=true;
+            Toast.makeText(view, "Grabación iniciada. Vuelve a pulsar para detener.", Toast.LENGTH_SHORT).show();
+        } else {
+            mMediaRecorder.stop();
+            mMediaRecorder.reset();
+            Log.v(TAG, "Stopping Recording");
+            Toast.makeText(view, "Grabación acabada.", Toast.LENGTH_SHORT).show();
+            stopScreenSharing();
+            isRecording=false;
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public void onActivityResultPresent(int resultCode, Intent data){
+        mMediaProjectionCallback = new MediaProjectionCallback();
+        mMediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
+        mMediaProjection.registerCallback(mMediaProjectionCallback, null);
+        mVirtualDisplay = createVirtualDisplay();
+        mMediaRecorder.start();
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void shareScreen() {
+        if (mMediaProjection == null) {
+            view.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), REQUEST_CODE);
+            return;
+        }
+        mVirtualDisplay = createVirtualDisplay();
+        mMediaRecorder.start();
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private VirtualDisplay createVirtualDisplay() {
+        return mMediaProjection.createVirtualDisplay("MainActivity",
+                DISPLAY_WIDTH, DISPLAY_HEIGHT, mScreenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mMediaRecorder.getSurface(), null /*Callbacks*/, null
+                /*Handler*/);
+    }
+
+    private void initRecorder() {
+        try {
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            //File outputFile = getOutputMediaFile(2);
+            mMediaRecorder.setOutputFile(Environment
+                    .getExternalStoragePublicDirectory(Environment
+                            .DIRECTORY_DOWNLOADS) + "/video.mp4");
+            mMediaRecorder.setVideoSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            mMediaRecorder.setVideoEncodingBitRate(512 * 1000);
+            mMediaRecorder.setVideoFrameRate(30);
+            int rotation = view.getWindowManager().getDefaultDisplay().getRotation();
+            int orientation = ORIENTATIONS.get(rotation + 90);
+            mMediaRecorder.setOrientationHint(orientation);
+            mMediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private class MediaProjectionCallback extends MediaProjection.Callback {
+        @Override
+        public void onStop() {
+            if (isRecording) {
+                isRecording=false;
+                mMediaRecorder.stop();
+                mMediaRecorder.reset();
+                Log.v(TAG, "Recording Stopped");
+            }
+            mMediaProjection = null;
+            stopScreenSharing();
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public void destroyMediaProjection() {
+        if (mMediaProjection != null) {
+            mMediaProjection.unregisterCallback(mMediaProjectionCallback);
+            mMediaProjection.stop();
+            mMediaProjection = null;
+        }
+        Log.i(TAG, "MediaProjection Stopped");
+    }
+
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    private void stopScreenSharing() {
+        if (mVirtualDisplay == null) {
+            return;
+        }
+        mVirtualDisplay.release();
+        //mMediaRecorder.release(); //If used: mMediaRecorder object cannot
+        // be reused again
+        destroyMediaProjection();
+    }
 
 
     public void changeCamera() {
@@ -128,115 +222,28 @@ public class Presenter {
         }
     }
 
-
-    public void changeMouth() {
-        if (mouth == false) {
-            mouth = true;
-        } else {
-            mouth = false;
-        }
-    }
-
     public void changeEyes() {
-        if (eyes == false) {
-            eyes = true;
+        if (eyesBoolean == false) {
+            eyesBoolean = true;
         } else {
-            eyes = false;
+            eyesBoolean = false;
         }
     }
 
     public void changeHat() {
-        if (hat == false) {
-            hat = true;
+        if (hatBoolean == false) {
+            hatBoolean = true;
         } else {
-            hat = false;
+            hatBoolean = false;
         }
     }
 
     public void changeMoustache() {
-        if (moustache == false) {
-            moustache = true;
+        if (moustacheBoolean == false) {
+            moustacheBoolean = true;
         } else {
-            moustache = false;
+            moustacheBoolean = false;
         }
-    }
-
-
-
-
-
-    public void takePicture() {
-        mCameraSourceFront.takePicture(new CameraSource.ShutterCallback() {
-            @Override
-            public void onShutter() {
-                Log.i("we1", "we");
-            }
-        }, new CameraSource.PictureCallback() {
-            @Override
-            public void onPictureTaken(byte[] bytes) {
-
-                mPreview.setDrawingCacheEnabled(true);
-                mGraphicOverlay.setDrawingCacheEnabled(true);
-
-
-                mPreview.buildDrawingCache();
-                mGraphicOverlay.buildDrawingCache();
-
-                Bitmap bm = mPreview.getDrawingCache();
-                Bitmap bm1 = mGraphicOverlay.getDrawingCache();
-
-                Bitmap bm2 = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-
-                Bitmap cs = null;
-
-                int height = 1920;
-                int width = 1080;
-/*
-                if(bm1.getWidth() > bm2.getWidth()) {
-                    width = bm1.getWidth() + bm2.getWidth();
-                    height = bm1.getHeight();
-                } else {
-                    width = bm2.getWidth() + bm2.getWidth();
-                    height = bm1.getHeight();
-                }
-*/
-                Log.i("height: ",String.valueOf(height));
-                Log.i("width: ",String.valueOf(width));
-
-                cs = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-
-                Canvas comboImage = new Canvas(cs);
-
-                comboImage.drawBitmap(bm2, 0f, 0f, null);
-                comboImage.drawBitmap(bm1, bm2.getWidth(), 0f, null);
-
-                String path = null;
-                try {
-                    path = saveImage(context, "imagen1", cs);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                Toast.makeText(context, path, Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    private String saveImage(Context context, String name, Bitmap bitmapImage) throws IOException {
-
-        String path = Environment.getExternalStorageDirectory().toString();
-        OutputStream fOut = null;
-        File file = new File(path, name+".jpg");
-        fOut = new FileOutputStream(file);
-
-        bitmapImage.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
-        fOut.flush();
-        fOut.close();
-
-        MediaStore.Images.Media.insertImage(context.getContentResolver(), file.getAbsolutePath(), file.getName(), file.getName());
-
-
-        return file.getAbsolutePath();
     }
 
 
@@ -289,6 +296,15 @@ public class Presenter {
         return true;
     }
 
+    public boolean checkAudioRecordPermissions(){
+        int rc = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO);
+
+        if (rc == PackageManager.PERMISSION_DENIED) {
+            requestAudioRecordPermissions();
+        }
+        return true;
+    }
+
     public boolean checkWriteExternalStoragePermissions(){
 
         int rc1 = ActivityCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -299,6 +315,16 @@ public class Presenter {
         return true;
     }
 
+
+    public void requestAudioRecordPermissions(){
+
+        final String[] permissions = new String[]{Manifest.permission.RECORD_AUDIO};
+
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(view,
+                Manifest.permission.RECORD_AUDIO)) {
+            ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_RECORD_AUDIO);
+        }
+    }
 
 
     public void requestExternalStoragePermission(){
@@ -339,8 +365,15 @@ public class Presenter {
         if (requestCode == RC_HANDLE_CAMERA_PERM && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Camera permission granted - initialize the camera source");
             createCameraSource(mGraphicOverlay);
+            checkAudioRecordPermissions();
             return false;
         }
+
+        if (requestCode == RC_HANDLE_RECORD_AUDIO && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Camera permission granted - initialize the camera source");
+            return false;
+        }
+
 
         return false;
     }
@@ -395,13 +428,12 @@ public class Presenter {
      */
     private class GraphicFaceTracker extends Tracker<Face> {
 
-
         GraphicFaceTracker(GraphicOverlay overlay) {
             mOverlay = overlay;
             mFaceGraphic = new FaceGraphic(overlay);
-            mFaceGraphic.setmBitmap(model.hatBitmap);
-            mFaceGraphic.setOjoBitmap(model.eyeScaledBitmap);
-            mFaceGraphic.setBocaBitmap(model.mouthBitmap);
+            mFaceGraphic.setHatBitmap(model.hatBitmap);
+            mFaceGraphic.setEyeLeftBitmap(model.eyeBitmapLeft);
+            mFaceGraphic.setEyeRightBitmap(model.eyeBitmapRight);
             mFaceGraphic.setMoustacheBitmap(model.moustacheBitmap);
 
         }
@@ -422,10 +454,9 @@ public class Presenter {
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
-            mFaceGraphic.setSombrero(hat);
-            mFaceGraphic.setOjos(eyes);
-            mFaceGraphic.setBoca(mouth);
-            mFaceGraphic.setMoustache(moustache);
+            mFaceGraphic.setHatBoolean(hatBoolean);
+            mFaceGraphic.setEyesBoolean(eyesBoolean);
+            mFaceGraphic.setMoustacheBoolean(moustacheBoolean);
         }
 
         /**
@@ -447,183 +478,6 @@ public class Presenter {
             mOverlay.remove(mFaceGraphic);
         }
     }
-
-    public void onCaptureClick() {
-        if (isRecording) {
-            // BEGIN_INCLUDE(stop_release_media_recorder)
-
-            // stop recording and release camera
-            try {
-                mMediaRecorder.stop();  // stop the recording
-            } catch (RuntimeException e) {
-                // RuntimeException is thrown when stop() is called immediately after start().
-                // In this case the output file is not properly constructed ans should be deleted.
-                Log.d(TAG, "RuntimeException: stop() is called immediately after start()");
-                //noinspection ResultOfMethodCallIgnored
-                mOutputFile.delete();
-            }
-            releaseMediaRecorder(); // release the MediaRecorder object
-            //mCamera.lock();         // take camera access back from MediaRecorder
-
-            // inform the user that recording has stopped
-            //setCaptureButtonText("Capture");
-            isRecording = false;
-            //releaseCamera();
-            // END_INCLUDE(stop_release_media_recorder)
-
-        } else {
-
-            // BEGIN_INCLUDE(prepare_start_media_recorder)
-
-            new MediaPrepareTask().execute(null, null, null);
-
-            // END_INCLUDE(prepare_start_media_recorder)
-
-        }
-    }
-
-   /* private void setCaptureButtonText(String title) {
-        captureButton.setText(title);
-    }*/
-
-
-
-    public void releaseMediaRecorder(){
-        if (mMediaRecorder != null) {
-            // clear recorder configuration
-            mMediaRecorder.reset();
-            // release the recorder object
-            mMediaRecorder.release();
-            mMediaRecorder = null;
-            // Lock camera for later use i.e taking it back from MediaRecorder.
-            // MediaRecorder doesn't need it anymore and we will release it if the activity pauses.
-            //mCamera.lock();
-        }
-    }
-
-    public void releaseCamera(){
-        if (mCamera != null){
-            // release the camera for other applications
-            mCamera.release();
-            mCamera = null;
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    private boolean prepareVideoRecorder(){
-
-        // BEGIN_INCLUDE (configure_preview)
-        if(usingCameraBack){
-            mCamera = CameraHelper.getDefaultCameraInstance();
-        }
-        else{
-            mCamera = android.hardware.Camera.open(CameraSource.CAMERA_FACING_FRONT);
-        }
-
-
-
-        // We need to make sure that our preview and recording video size are supported by the
-        // camera. Query camera to find all the sizes and choose the optimal size given the
-        // dimensions of our preview surface.
-        android.hardware.Camera.Parameters parameters = mCamera.getParameters();
-        List<android.hardware.Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
-        List<android.hardware.Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-        android.hardware.Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
-                mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
-
-        // Use the same size for recording profile.
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
-        profile.videoFrameWidth = optimalSize.width;
-        profile.videoFrameHeight = optimalSize.height;
-
-
-        // likewise for the camera object itself.
-        parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
-        mCamera.setParameters(parameters);
-        try {
-            // Requires API level 11+, For backward compatibility use {@link setPreviewDisplay}
-            // with {@link SurfaceView}
-
-            mCamera.setPreviewDisplay(mPreview.mSurfaceView.getHolder());
-        } catch (IOException e) {
-            Log.e(TAG, "Surface texture is unavailable or unsuitable" + e.getMessage());
-            return false;
-        }
-        // END_INCLUDE (configure_preview)
-
-
-        // BEGIN_INCLUDE (configure_media_recorder)
-        mMediaRecorder = new MediaRecorder();
-
-        // Step 1: Unlock and set camera to MediaRecorder
-        mCamera.unlock();
-        mMediaRecorder.setCamera(mCamera);
-
-        // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-
-
-        // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
-        mMediaRecorder.setProfile(profile);
-
-        // Step 4: Set output file
-        mOutputFile = CameraHelper.getOutputMediaFile(CameraHelper.MEDIA_TYPE_VIDEO);
-        if (mOutputFile == null) {
-            return false;
-        }
-        mMediaRecorder.setOutputFile(mOutputFile.getPath());
-        // END_INCLUDE (configure_media_recorder)
-
-        // Step 5: Prepare configured MediaRecorder
-        try {
-            mMediaRecorder.prepare();
-        } catch (IllegalStateException e) {
-            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        } catch (IOException e) {
-            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
-            releaseMediaRecorder();
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Asynchronous task for preparing the {@link android.media.MediaRecorder} since it's a long blocking
-     * operation.
-     */
-    class MediaPrepareTask extends AsyncTask<Void, Void, Boolean> {
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            // initialize video camera
-            if (prepareVideoRecorder()) {
-                // Camera is available and unlocked, MediaRecorder is prepared,
-                // now you can start recording
-                mMediaRecorder.start();
-
-                isRecording = true;
-            } else {
-                // prepare didn't work, release the camera
-                releaseMediaRecorder();
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            if (!result) {
-                view.finish();
-            }
-            // inform the user that recording has started
-            //setCaptureButtonText("Stop");
-
-        }
-    }
-
 
 
 }

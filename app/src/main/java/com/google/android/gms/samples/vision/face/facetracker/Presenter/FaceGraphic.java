@@ -35,13 +35,13 @@ class FaceGraphic extends GraphicOverlay.Graphic {
     private static final float BOX_STROKE_WIDTH = 5.0f;
 
     private static final int COLOR_CHOICES[] = {
-        Color.BLUE,
-        Color.CYAN,
-        Color.GREEN,
-        Color.MAGENTA,
-        Color.RED,
-        Color.WHITE,
-        Color.YELLOW
+            Color.BLUE,
+            Color.CYAN,
+            Color.GREEN,
+            Color.MAGENTA,
+            Color.RED,
+            Color.WHITE,
+            Color.YELLOW
     };
     private static int mCurrentColorIndex = 0;
 
@@ -57,7 +57,8 @@ class FaceGraphic extends GraphicOverlay.Graphic {
     private Boolean moustache = false;
 
     private Bitmap sombreroBitmap;
-    private Bitmap ojosBitmap;
+    private Bitmap eyeLeftBitmap;
+    private Bitmap eyeRightBitmap;
     private Bitmap bocaBitmap;
     private Bitmap moustacheBitmap;
     List<PointF> lista = new ArrayList<>();
@@ -93,38 +94,36 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mFaceId = id;
     }
 
-    void setmBitmap(Bitmap bitmap){
+    void setHatBitmap(Bitmap bitmap){
         sombreroBitmap = bitmap;
     }
 
-    void setOjoBitmap(Bitmap bitmap){
-        ojosBitmap = bitmap;
+    void setEyeLeftBitmap(Bitmap bitmap){
+        eyeLeftBitmap = bitmap;
     }
 
-    void setBocaBitmap(Bitmap bitmap){
-        bocaBitmap = bitmap;
+    void setEyeRightBitmap(Bitmap bitmap){
+        eyeRightBitmap = bitmap;
     }
+
 
 
     void setMoustacheBitmap(Bitmap bitmap){
         moustacheBitmap = bitmap;
     }
 
-    void setSombrero(Boolean sombrero){
+    void setHatBoolean(Boolean sombrero){
         this.sombrero=sombrero;
     }
 
-    void setMoustache(Boolean moustache){
+    void setMoustacheBoolean(Boolean moustache){
         this.moustache=moustache;
     }
 
-    void setOjos(Boolean ojos){
+    void setEyesBoolean(Boolean ojos){
         this.ojos=ojos;
     }
 
-    void setBoca(Boolean boca){
-        this.boca=boca;
-    }
 
     void setCameraOrientation(Boolean cameraOrientation){
         mCameraOrientation = cameraOrientation;
@@ -149,7 +148,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         if (face == null) {
             return;
         }
-
+        // Draws a circle at the position of the detected face, with the face's track id below.
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
 
@@ -159,7 +158,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         float top = y - yOffset;
         float right = x + xOffset;
         float bottom = y + yOffset;
-        RectF rectF = new RectF(left,top-2*(bottom-top)/3,right,bottom-2*(bottom-top)/3);
+        RectF rectF = new RectF(left+(right-left)/2,(top-2*(bottom-top)/5),right+(right-left)/4,bottom-2*(bottom-top)/3);
 
 
         canvas.save(Canvas.MATRIX_SAVE_FLAG);
@@ -197,7 +196,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
             if (lista.size() == 8) {
 
                 for (int j = 0; j < lista.size(); j++) {
-                    if (j < 2 && ojos) {
+                    if (j == 0 && ojos ) {
                         float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 3);
                         float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
                         float left1 = lista.get(j).x - xOffset1;
@@ -217,11 +216,38 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
                         canvas.concat(m1);
 
-                        canvas.drawBitmap(ojosBitmap, null, rectF1, mBoxPaint);
+                        canvas.drawBitmap(eyeLeftBitmap, null, rectF1, mBoxPaint);
 
                         canvas.restore();
 
                     }
+
+                    if (j == 1 && ojos) {
+                        float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 3);
+                        float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
+                        float left1 = lista.get(j).x - xOffset1;
+                        float top1 = lista.get(j).y - yOffset1;
+                        float right1 = lista.get(j).x + xOffset1;
+                        float bottom1 = lista.get(j).y + yOffset1;
+                        RectF rectF1 = new RectF(left1, top1, right1, bottom1);
+
+                        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+                        Matrix m1 = new Matrix();
+
+                        if(mCameraOrientation){
+                            m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }else{
+                            m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
+                        }
+
+                        canvas.concat(m1);
+
+                        canvas.drawBitmap(eyeRightBitmap, null, rectF1, mBoxPaint);
+
+                        canvas.restore();
+
+                    }
+
 
                     if(j==2 && moustache){
 
@@ -276,16 +302,13 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.drawBitmap(bocaBitmap, null, rectF1, mBoxPaint);
 
                         canvas.restore();
-
                     }
-
                 }
-
 
                 i++;
 
             }
-       }
+        }
     }
 
 

@@ -36,7 +36,7 @@
         <activity
             android:name=".View.View"
             android:icon="@drawable/icon23"
-            android:label="Face Tracker"
+            android:label="VideonaTalentum"
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.AppCompat.NoActionBar">
             <intent-filter>

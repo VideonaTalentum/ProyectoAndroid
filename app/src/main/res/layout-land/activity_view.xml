@@ -55,15 +55,6 @@
                 android:layout_height="wrap_content"
                 android:backgroundTint="#00052345"
                 app:fabSize="mini"
-                android:src="@drawable/mouth_icon"
-                android:id="@+id/mouthIcon"
-                />
-
-            <com.getbase.floatingactionbutton.FloatingActionButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:backgroundTint="#00052345"
-                app:fabSize="mini"
                 android:src="@drawable/moustache_icon"
                 android:id="@+id/moustacheIcon"/>
 
