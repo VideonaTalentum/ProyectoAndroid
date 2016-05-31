@@ -14,31 +14,25 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Camera;
 import android.graphics.Canvas;
-<<<<<<< HEAD
+import android.graphics.drawable.GradientDrawable;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
-=======
-import android.hardware.Camera;
 import android.hardware.camera2.CameraManager;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.AsyncTask;
 import android.os.Build;
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-<<<<<<< HEAD
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-=======
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -71,19 +65,14 @@ public class Presenter {
     private Context context;
 
 
-<<<<<<< HEAD
-    private static final String TAG = "FaceTracker";
-=======
 
-    private Camera mCamera;
+    private android.hardware.Camera mCamera;
     private MediaRecorder mMediaRecorder;
     private File mOutputFile;
 
     private boolean isRecording = false;
     private static final String TAG = "Recorder";
 
-
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
@@ -104,15 +93,13 @@ public class Presenter {
     private static final int RC_HANDLE_CAMERA_PERM = 2;
     private static final int RC_HANDLE_WRITE_EXTERNAL_STORAGE = 3;
 
-<<<<<<< HEAD
     public MediaRecorder recorder;
     SurfaceHolder holder;
     public boolean recording = false;
     SurfaceView cameraView;
-=======
+
     private GraphicOverlay mOverlay;
     private FaceGraphic mFaceGraphic;
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
 
 
     public Presenter(Context context, GraphicOverlay overlay, CameraSourcePreview preview, Model model, android.app.Activity view) {
@@ -476,12 +463,12 @@ public class Presenter {
                 mOutputFile.delete();
             }
             releaseMediaRecorder(); // release the MediaRecorder object
-            mCamera.lock();         // take camera access back from MediaRecorder
+            //mCamera.lock();         // take camera access back from MediaRecorder
 
             // inform the user that recording has stopped
             //setCaptureButtonText("Capture");
             isRecording = false;
-            releaseCamera();
+            //releaseCamera();
             // END_INCLUDE(stop_release_media_recorder)
 
         } else {
@@ -510,7 +497,7 @@ public class Presenter {
             mMediaRecorder = null;
             // Lock camera for later use i.e taking it back from MediaRecorder.
             // MediaRecorder doesn't need it anymore and we will release it if the activity pauses.
-            mCamera.lock();
+            //mCamera.lock();
         }
     }
 
@@ -527,10 +514,10 @@ public class Presenter {
 
         // BEGIN_INCLUDE (configure_preview)
         if(usingCameraBack){
-            mCamera = Camera.open(CameraSource.CAMERA_FACING_BACK);
+            mCamera = CameraHelper.getDefaultCameraInstance();
         }
         else{
-            mCamera = Camera.open(CameraSource.CAMERA_FACING_FRONT);
+            mCamera = android.hardware.Camera.open(CameraSource.CAMERA_FACING_FRONT);
         }
 
 
@@ -538,16 +525,17 @@ public class Presenter {
         // We need to make sure that our preview and recording video size are supported by the
         // camera. Query camera to find all the sizes and choose the optimal size given the
         // dimensions of our preview surface.
-        Camera.Parameters parameters = mCamera.getParameters();
-        List<Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
-        List<Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
-        Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
+        android.hardware.Camera.Parameters parameters = mCamera.getParameters();
+        List<android.hardware.Camera.Size> mSupportedPreviewSizes = parameters.getSupportedPreviewSizes();
+        List<android.hardware.Camera.Size> mSupportedVideoSizes = parameters.getSupportedVideoSizes();
+        android.hardware.Camera.Size optimalSize = CameraHelper.getOptimalVideoSize(mSupportedVideoSizes,
                 mSupportedPreviewSizes, mPreview.getWidth(), mPreview.getHeight());
 
         // Use the same size for recording profile.
         CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
         profile.videoFrameWidth = optimalSize.width;
         profile.videoFrameHeight = optimalSize.height;
+
 
         // likewise for the camera object itself.
         parameters.setPreviewSize(profile.videoFrameWidth, profile.videoFrameHeight);
@@ -572,7 +560,7 @@ public class Presenter {
         mMediaRecorder.setCamera(mCamera);
 
         // Step 2: Set sources
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT );
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 
 

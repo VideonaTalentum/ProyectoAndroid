@@ -29,13 +29,9 @@ public class Model {
     public Model(Context context){
         this.context = context;
         hatBitmap = BitmapFactory.decodeResource(context.getResources(),
-<<<<<<< HEAD
         R.drawable.sombrero_indiana_x3);
         eyeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.eye_sorpresa_dcha_x3);
-=======
-        R.drawable.mascaras_17);
         eyeBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ojo);
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
         eyeScaledBitmap = Bitmap.createScaledBitmap(eyeBitmap, 200, 200, true);
         mouthBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.boca);
         moustacheBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.moustage_garfio);

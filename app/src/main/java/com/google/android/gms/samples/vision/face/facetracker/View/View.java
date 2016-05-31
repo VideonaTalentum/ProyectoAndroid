@@ -5,14 +5,11 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.graphics.Camera;
 import android.os.Bundle;
-<<<<<<< HEAD
 import android.support.v4.app.ActivityCompat;
 import android.view.SurfaceHolder;
 import android.view.Window;
 import android.widget.ImageView;
 
-=======
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
 import com.google.android.gms.samples.vision.face.facetracker.Presenter.Presenter;
 import com.google.android.gms.samples.vision.face.facetracker.R;
@@ -67,11 +64,6 @@ public class View extends Activity implements android.view.View.OnClickListener 
         presenter.checkWriteExternalStoragePermissions();
         presenter.checkCameraPermissions(mGraphicOverlay);
 
-<<<<<<< HEAD
-
-
-=======
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
     }
 
 
@@ -130,11 +122,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
                 presenter.changeMoustache();
                 break;
             case R.id.recordIcon:
-<<<<<<< HEAD
-
-=======
                 presenter.onCaptureClick();
->>>>>>> f76f696912f21235d6e0f2852a9d4264f7e76971
                 break;
             case R.id.changeCameraIcon:
                 presenter.changeCamera();
