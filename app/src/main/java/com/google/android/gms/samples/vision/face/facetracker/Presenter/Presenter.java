@@ -27,7 +27,11 @@ import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
+
+import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by Arranque 1 on 24/05/2016.
@@ -85,6 +89,8 @@ public class Presenter {
     private GraphicOverlay mOverlay;
     private FaceGraphic mFaceGraphic;
 
+    private DisplayMetrics metrics;
+
 
     public Presenter(Context context, GraphicOverlay overlay, CameraSourcePreview preview, Model model, android.app.Activity view) {
         this.model = model;
@@ -93,7 +99,9 @@ public class Presenter {
         this.context = context;
         this.view = view;
 
-        DisplayMetrics metrics = new DisplayMetrics();
+    }
+    public void prepareVideo(){
+        metrics = new DisplayMetrics();
         view.getWindowManager().getDefaultDisplay().getMetrics(metrics);
         mScreenDensity = metrics.densityDpi;
 
@@ -101,12 +109,12 @@ public class Presenter {
 
         mProjectionManager = (MediaProjectionManager) view.getSystemService
                 (Context.MEDIA_PROJECTION_SERVICE);
-
     }
 
 
     public void onToggleScreenShare() {
         if (!isRecording) {
+            prepareVideo();
             initRecorder();
             shareScreen();
             isRecording=true;
@@ -153,15 +161,17 @@ public class Presenter {
         try {
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            //File outputFile = getOutputMediaFile(2);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String fileName = "VID_" + timeStamp + ".mp4";
             mMediaRecorder.setOutputFile(Environment
                     .getExternalStoragePublicDirectory(Environment
-                            .DIRECTORY_DOWNLOADS) + "/video.mp4");
+                            .DIRECTORY_DOWNLOADS) + File.separator + fileName);
             mMediaRecorder.setVideoSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mMediaRecorder.setVideoEncodingBitRate(512 * 1000);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mMediaRecorder.setVideoEncodingBitRate(2048 * 1000);
+            mMediaRecorder.setAudioEncodingBitRate(128*1000);
             mMediaRecorder.setVideoFrameRate(30);
             int rotation = view.getWindowManager().getDefaultDisplay().getRotation();
             int orientation = ORIENTATIONS.get(rotation + 90);
@@ -204,7 +214,7 @@ public class Presenter {
             return;
         }
         mVirtualDisplay.release();
-        //mMediaRecorder.release(); //If used: mMediaRecorder object cannot
+        mMediaRecorder.release(); //If used: mMediaRecorder object cannot
         // be reused again
         destroyMediaProjection();
     }
@@ -293,17 +303,13 @@ public class Presenter {
         } else {
             return requestCameraPermission();
         }
+
+
         return true;
     }
 
-    public boolean checkAudioRecordPermissions(){
-        int rc = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO);
 
-        if (rc == PackageManager.PERMISSION_DENIED) {
-            requestAudioRecordPermissions();
-        }
-        return true;
-    }
+
 
     public boolean checkWriteExternalStoragePermissions(){
 
@@ -314,18 +320,27 @@ public class Presenter {
         }
         return true;
     }
+    public boolean checkAudioPermissions(){
+
+        int rc1 = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO);
+
+        if(rc1 == PackageManager.PERMISSION_DENIED){
+            requestAudioPermission();
+        }
+        return true;
+    }
 
 
-    public void requestAudioRecordPermissions(){
 
+    public void requestAudioPermission(){
         final String[] permissions = new String[]{Manifest.permission.RECORD_AUDIO};
 
         if (!ActivityCompat.shouldShowRequestPermissionRationale(view,
                 Manifest.permission.RECORD_AUDIO)) {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_RECORD_AUDIO);
         }
-    }
 
+    }
 
     public void requestExternalStoragePermission(){
 
@@ -335,6 +350,8 @@ public class Presenter {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_WRITE_EXTERNAL_STORAGE);
         }
+
+
     }
 
 
@@ -347,8 +364,11 @@ public class Presenter {
                 Manifest.permission.CAMERA)) {
             ActivityCompat.requestPermissions(view, permissions, RC_HANDLE_CAMERA_PERM);
         }
+
         return false;
     }
+
+
 
     public boolean onRequestPermissionsResultPresenter(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode != RC_HANDLE_CAMERA_PERM && requestCode != RC_HANDLE_WRITE_EXTERNAL_STORAGE) {
@@ -356,24 +376,27 @@ public class Presenter {
             return true;
         }
 
+
+
         if (requestCode == RC_HANDLE_WRITE_EXTERNAL_STORAGE && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Write External Storage permission granted");
+            checkAudioPermissions();
+            return false;
+        }
+
+        if (requestCode == RC_HANDLE_RECORD_AUDIO && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Write External Storage permission granted");
             checkCameraPermissions(mGraphicOverlay);
             return false;
         }
 
+
+
         if (requestCode == RC_HANDLE_CAMERA_PERM && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "Camera permission granted - initialize the camera source");
             createCameraSource(mGraphicOverlay);
-            checkAudioRecordPermissions();
             return false;
         }
-
-        if (requestCode == RC_HANDLE_RECORD_AUDIO && grantResults.length != 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "Camera permission granted - initialize the camera source");
-            return false;
-        }
-
 
         return false;
     }
@@ -427,11 +450,13 @@ public class Presenter {
      * associated face overlay.
      */
     private class GraphicFaceTracker extends Tracker<Face> {
+        private GraphicOverlay mOverlay;
+        private FaceGraphic mFaceGraphic;
 
         GraphicFaceTracker(GraphicOverlay overlay) {
             mOverlay = overlay;
             mFaceGraphic = new FaceGraphic(overlay);
-            mFaceGraphic.setHatBitmap(model.hatBitmap);
+            mFaceGraphic.setmBitmap(model.hatBitmap);
             mFaceGraphic.setEyeLeftBitmap(model.eyeBitmapLeft);
             mFaceGraphic.setEyeRightBitmap(model.eyeBitmapRight);
             mFaceGraphic.setMoustacheBitmap(model.moustacheBitmap);
@@ -454,9 +479,9 @@ public class Presenter {
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
-            mFaceGraphic.setHatBoolean(hatBoolean);
-            mFaceGraphic.setEyesBoolean(eyesBoolean);
-            mFaceGraphic.setMoustacheBoolean(moustacheBoolean);
+            mFaceGraphic.setSombrero(hatBoolean);
+            mFaceGraphic.setOjos(eyesBoolean);
+            mFaceGraphic.setMoustache(moustacheBoolean);
         }
 
         /**
@@ -478,6 +503,7 @@ public class Presenter {
             mOverlay.remove(mFaceGraphic);
         }
     }
+
 
 
 }

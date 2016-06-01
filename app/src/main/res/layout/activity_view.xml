@@ -72,17 +72,15 @@
 
     </RelativeLayout>
 
-    <com.getbase.floatingactionbutton.FloatingActionButton
+    <android.support.design.widget.FloatingActionButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:backgroundTint="#00052345"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:scaleType="center"
-        android:src="@drawable/record_icon"
+        android:background="@drawable/ic_play_button"
         android:id="@+id/recordIcon"
-        app:fabSize="normal"
-        />
+        app:fabSize="normal"/>
+
 
     <com.getbase.floatingactionbutton.FloatingActionButton
         android:layout_width="wrap_content"

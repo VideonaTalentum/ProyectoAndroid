@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.google.android.gms.samples.vision.face.facetracker.Model.Model;
 import com.google.android.gms.samples.vision.face.facetracker.Presenter.Presenter;
 import com.google.android.gms.samples.vision.face.facetracker.R;
@@ -24,7 +25,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
     private com.getbase.floatingactionbutton.FloatingActionButton hatIcon;
     private com.getbase.floatingactionbutton.FloatingActionButton eyesIcon;
     private com.getbase.floatingactionbutton.FloatingActionButton moustacheIcon;
-    private com.getbase.floatingactionbutton.FloatingActionButton recordIcon;
+    private android.support.design.widget.FloatingActionButton recordIcon;
     private com.getbase.floatingactionbutton.FloatingActionButton changeCameraIcon;
 
     private static final String TAG = "MainActivity";
@@ -47,7 +48,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
         hatIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.hatIcon);
         eyesIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.eyesIcon);
         moustacheIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.moustacheIcon);
-        recordIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.recordIcon);
+        recordIcon = (android.support.design.widget.FloatingActionButton) findViewById(R.id.recordIcon);
         changeCameraIcon = (com.getbase.floatingactionbutton.FloatingActionButton) findViewById(R.id.changeCameraIcon);
 
         hatIcon.setOnClickListener(this);
@@ -60,7 +61,7 @@ public class View extends Activity implements android.view.View.OnClickListener 
 
         presenter.checkWriteExternalStoragePermissions();
         presenter.checkCameraPermissions(mGraphicOverlay);
-        presenter.checkAudioRecordPermissions();
+        presenter.checkAudioPermissions();
 
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -138,6 +139,11 @@ public class View extends Activity implements android.view.View.OnClickListener 
                 break;
             case R.id.recordIcon:
                 presenter.onToggleScreenShare();
+                if(presenter.isRecording){
+                    v.setBackgroundResource(R.drawable.ic_pause_button);
+                }else{
+                    v.setBackgroundResource(R.drawable.ic_play_button);
+                }
                 break;
             case R.id.changeCameraIcon:
                 presenter.changeCamera();

@@ -68,7 +68,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
     private Boolean mCameraOrientation;
 
-    private  GraphicOverlay mOverlay;
+    private GraphicOverlay mOverlay;
 
     FaceGraphic(GraphicOverlay overlay) {
         super(overlay);
@@ -94,38 +94,44 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mFaceId = id;
     }
 
-    void setHatBitmap(Bitmap bitmap){
+    void setmBitmap(Bitmap bitmap) {
         sombreroBitmap = bitmap;
     }
 
-    void setEyeLeftBitmap(Bitmap bitmap){
+    void setEyeLeftBitmap(Bitmap bitmap) {
         eyeLeftBitmap = bitmap;
     }
 
-    void setEyeRightBitmap(Bitmap bitmap){
+    void setEyeRightBitmap(Bitmap bitmap) {
         eyeRightBitmap = bitmap;
     }
 
+    void setBocaBitmap(Bitmap bitmap) {
+        bocaBitmap = bitmap;
+    }
 
 
-    void setMoustacheBitmap(Bitmap bitmap){
+    void setMoustacheBitmap(Bitmap bitmap) {
         moustacheBitmap = bitmap;
     }
 
-    void setHatBoolean(Boolean sombrero){
-        this.sombrero=sombrero;
+    void setSombrero(Boolean sombrero) {
+        this.sombrero = sombrero;
     }
 
-    void setMoustacheBoolean(Boolean moustache){
-        this.moustache=moustache;
+    void setMoustache(Boolean moustache) {
+        this.moustache = moustache;
     }
 
-    void setEyesBoolean(Boolean ojos){
-        this.ojos=ojos;
+    void setOjos(Boolean ojos) {
+        this.ojos = ojos;
     }
 
+    void setBoca(Boolean boca) {
+        this.boca = boca;
+    }
 
-    void setCameraOrientation(Boolean cameraOrientation){
+    void setCameraOrientation(Boolean cameraOrientation) {
         mCameraOrientation = cameraOrientation;
     }
 
@@ -158,29 +164,27 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         float top = y - yOffset;
         float right = x + xOffset;
         float bottom = y + yOffset;
-        RectF rectF = new RectF(left+(right-left)/2,(top-2*(bottom-top)/5),right+(right-left)/4,bottom-2*(bottom-top)/3);
+        RectF rectF = new RectF(left + (right - left) / 2, (top - 2 * (bottom - top) / 5), right + (right - left) / 4, bottom - 2 * (bottom - top) / 3);
 
 
         canvas.save(Canvas.MATRIX_SAVE_FLAG);
         Matrix m = new Matrix();
 
-        if(mCameraOrientation){
+        if (mCameraOrientation) {
             m.setRotate(-face.getEulerZ(), rectF.centerX(), rectF.centerY() + rectF.height());
-        }else{
+        } else {
             m.setRotate(face.getEulerZ(), rectF.centerX(), rectF.centerY() + rectF.height());
         }
 
         canvas.concat(m);
-        if(sombrero) {
+        if (sombrero) {
             canvas.drawBitmap(sombreroBitmap, null, rectF, mBoxPaint);
         }
 
         canvas.restore();
 
 
-
-
-        int i=0;
+        int i = 0;
 
         List<PointF> lista2 = new ArrayList<>();
         for (Landmark landmark : mFace.getLandmarks()) {
@@ -189,14 +193,14 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
             lista2.add(new PointF(cx, cy));
 
-            if(lista2.size()==8){
-                lista=lista2;
+            if (lista2.size() == 8) {
+                lista = lista2;
             }
 
             if (lista.size() == 8) {
 
                 for (int j = 0; j < lista.size(); j++) {
-                    if (j == 0 && ojos ) {
+                    if (j == 0 && ojos) {
                         float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 3);
                         float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
                         float left1 = lista.get(j).x - xOffset1;
@@ -208,9 +212,9 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.save(Canvas.MATRIX_SAVE_FLAG);
                         Matrix m1 = new Matrix();
 
-                        if(mCameraOrientation){
+                        if (mCameraOrientation) {
                             m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
-                        }else{
+                        } else {
                             m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
                         }
 
@@ -234,9 +238,9 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.save(Canvas.MATRIX_SAVE_FLAG);
                         Matrix m1 = new Matrix();
 
-                        if(mCameraOrientation){
+                        if (mCameraOrientation) {
                             m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
-                        }else{
+                        } else {
                             m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
                         }
 
@@ -249,23 +253,23 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                     }
 
 
-                    if(j==2 && moustache){
+                    if (j == 2 && moustache) {
 
                         float xOffset1 = (scaleX(face.getWidth() / 2.0f));
                         float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 3);
                         float left1 = lista.get(j).x - xOffset1;
                         float top1 = lista.get(j).y - yOffset1;
                         float right1 = lista.get(j).x + xOffset1;
-                        float bottom1 = lista.get(j).y + 2*yOffset1;
+                        float bottom1 = lista.get(j).y + 2 * yOffset1;
                         RectF rectF1 = new RectF(left1, top1, right1, bottom1);
 
                         canvas.save(Canvas.MATRIX_SAVE_FLAG);
                         Matrix m1 = new Matrix();
 
 
-                        if(mCameraOrientation){
+                        if (mCameraOrientation) {
                             m1.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
-                        }else{
+                        } else {
                             m1.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
                         }
 
@@ -278,7 +282,7 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
                     }
 
-                    if (j ==7 && boca) {
+                    if (j == 7 && boca) {
 
                         float xOffset1 = (scaleX(face.getWidth() / 2.0f) / 4);
                         float yOffset1 = (scaleY(face.getHeight() / 2.0f) / 4);
@@ -291,9 +295,9 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.save(Canvas.MATRIX_SAVE_FLAG);
                         Matrix m2 = new Matrix();
 
-                        if(mCameraOrientation){
+                        if (mCameraOrientation) {
                             m2.setRotate(-face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
-                        }else{
+                        } else {
                             m2.setRotate(face.getEulerZ(), rectF1.centerX(), rectF1.centerY());
                         }
 
@@ -302,21 +306,16 @@ class FaceGraphic extends GraphicOverlay.Graphic {
                         canvas.drawBitmap(bocaBitmap, null, rectF1, mBoxPaint);
 
                         canvas.restore();
+
                     }
+
                 }
+
 
                 i++;
 
             }
         }
     }
-
-
-
-
-
-
-
-
 
 }
